@@ -1,17 +1,18 @@
-// app/layout.tsx
+// src/app/layout.tsx
+
 import type { Metadata } from "next";
-import { VT323 } from "next/font/google"; // Fontu import et
+// HATA BURADAYDI: VT33 -> VT323 OLARAK DÜZELTİLDİ
+import { VT323 } from "next/font/google";
 import "./globals.css";
 
-// Font ayarlarını yap
+// HATA BURADAYDI: VT33 -> VT323 OLARAK DÜZELTİLDİ
 const vt323 = VT323({
   subsets: ["latin"],
-  weight: "400", // Sadece bir ağırlığı var
-  variable: "--font-vt323", // CSS değişkeni olarak tanımla
+  weight: "400",
 });
 
 export const metadata: Metadata = {
-  title: "ŞİDMİ",
+  title: "STORYTELLING",
   description: "Metin tabanlı macera oyunu",
 };
 
@@ -22,8 +23,9 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="tr">
-      {/* Fontun class'ını body'ye uygula */}
-      <body className={`${vt323.className} bg-black`}>{children}</body>
+      <body className={`${vt323.className} bg-black text-white min-h-screen`}>
+        {children}
+      </body>
     </html>
   );
 }

@@ -1,25 +1,61 @@
-/* app/globals.css veya src/app/globals.css */
+/* src/app/globals.css */
 
-@import "tailwindcss/preflight";
-@import "tailwindcss/utilities";
+/* Elle Renk Tanımlaması */
+body {
+  background-color: #000000 !important;
+  color: #FFFFFF !important;
+}
 
-/* Önceki cevaptaki animasyon kodları buradaydı. 
-  Eğer sildiysen tekrar ekleyebilirsin.
-*/
+/* Başlık */
+h1 {
+  text-shadow: 0 0 8px rgba(255, 255, 255, 0.3);
+}
+
+/* Hikaye Kutusu */
+.story-box {
+  border: 1px solid white;
+  padding: 1rem;
+  overflow-y: auto;
+  height: 60vh;
+}
+
+/* Kullanıcının yazdığı metin (> ile başlayan) */
+.user-text {
+  color: #cccccc;
+}
+
+/* Yazı yazma alanı */
+.input-prompt {
+  display: flex;
+  align-items: center;
+  width: 100%;
+}
+
+.story-input {
+  width: 100%;
+  background-color: transparent;
+  /* YENİ: Boyutu paragraf ile aynı (1.125rem) yapıldı */
+  font-size: 1.125rem; 
+  /* YENİ: Fontu sayfanın geri kalanından miras alması sağlandı */
+  font-family: inherit; 
+  padding: 0.5rem;
+  border: none;
+  color: white;
+}
+
+.story-input:focus {
+  outline: none;
+}
+
+.story-input::placeholder {
+  color: #6b7280;
+}
+
+/* Animasyonlar */
 @keyframes fadeIn {
   from { opacity: 0; }
   to { opacity: 1; }
 }
-
 .fade-in {
   animation: fadeIn 0.5s ease-in-out;
-}
-
-@keyframes blink {
-  50% { opacity: 0; }
-}
-
-.blinking-cursor {
-  animation: blink 1s step-end infinite;
-  font-weight: bold;
 }

@@ -2,6 +2,7 @@
 'use client';
 
 import { useState, useEffect, FormEvent, useRef } from 'react';
+import { Typewriter } from 'react-simple-typewriter';
 
 interface Message {
   role: 'user' | 'assistant';
@@ -11,18 +12,14 @@ interface Message {
 export default function Home() {
   const [history, setHistory] = useState<Message[]>([]);
   const [userInput, setUserInput] = useState('');
-  const [isLoading, setIsLoading] = useState(true); // Başlangıçta true
+  const [isLoading, setIsLoading] = useState(true);
   const storyContainerRef = useRef<HTMLDivElement>(null);
-  const inputRef = useRef<HTMLInputElement>(null);
 
+  // Oyunun başlangıç mantığı aynı kalıyor...
   useEffect(() => {
     const startGame = async () => {
       setIsLoading(true);
-      const response = await fetch('/api/story', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ history: [] }),
-      });
+      const response = await fetch('/api/story', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ history: [] }) });
       const data = await response.json();
       if (data.message) {
         setHistory([{ role: 'assistant', content: data.message }]);
@@ -34,31 +31,18 @@ export default function Home() {
 
   useEffect(() => {
     storyContainerRef.current?.scrollTo(0, storyContainerRef.current.scrollHeight);
-    if (!isLoading) {
-        inputRef.current?.focus();
-    }
-  }, [history, isLoading]);
-
+  }, [history]);
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     if (!userInput.trim() || isLoading) return;
-
     const newUserMessage: Message = { role: 'user', content: userInput };
     const newHistory = [...history, newUserMessage];
-    
     setHistory(newHistory);
     setUserInput('');
     setIsLoading(true);
-
-    const response = await fetch('/api/story', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ history: newHistory }),
-    });
-
+    const response = await fetch('/api/story', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ history: newHistory }) });
     const data = await response.json();
-
     if (data.message) {
       setHistory([...newHistory, { role: 'assistant', content: data.message }]);
     }
@@ -66,47 +50,41 @@ export default function Home() {
   };
 
   return (
-    <main className="bg-black text-green-400 min-h-screen flex flex-col items-center justify-center p-4 sm:p-8">
-      <div className="w-full max-w-4xl flex flex-col h-[90vh]">
-        <h1 
-          className="text-4xl md:text-6xl mb-6 text-center" 
-          style={{ textShadow: '0 0 5px #39FF14, 0 0 10px #39FF14' }}
-        >
-          Ş İ D M İ
+    <div style={{ padding: '2rem', display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '100vh' }}>
+      <div style={{ width: '100%', maxWidth: '896px' }}>
+        {/* YENİ: Başlığın font boyutu '3rem' (48px) olarak küçültüldü */}
+        <h1 style={{ fontSize: '3rem', marginBottom: '1.5rem', textAlign: 'center', letterSpacing: '0.1em' }}>
+          STORYTELLING
         </h1>
         
-        <div 
-          ref={storyContainerRef} 
-          className="flex-grow mb-6 space-y-4 overflow-y-auto p-4 border border-green-700/50 rounded-sm"
-        >
+        <div ref={storyContainerRef} className="story-box">
           {history.map((msg, index) => (
-            <div key={index} className="fade-in">
+            <div key={index} className="fade-in" style={{ marginBottom: '1.5rem' }}>
               {msg.role === 'assistant' ? (
-                // Anlatıcı metni satır satır yazılıyormuş gibi göstermek için
-                <p className="whitespace-pre-wrap">{msg.content}</p>
+                <p style={{ whiteSpace: 'pre-wrap', fontSize: '1.125rem' }}>
+                  <Typewriter words={[msg.content]} loop={1} cursor cursorStyle='_' typeSpeed={20} />
+                </p>
               ) : (
-                <p className="text-green-600/70">{`> ${msg.content}`}</p>
+                <p className="user-text" style={{ fontSize: '1.125rem' }}>{`> ${msg.content}`}</p>
               )}
             </div>
           ))}
-          {isLoading && <p className="text-green-400/50 animate-pulse">...</p>}
+          {isLoading && <p style={{ color: '#6b7280' }}>...</p>}
         </div>
 
-        <form onSubmit={handleSubmit} className="flex items-center">
-          <span className="text-2xl mr-2 text-green-400">&gt;</span>
+        <form onSubmit={handleSubmit} className="input-prompt" style={{ marginTop: '1.5rem' }}>
+          <span style={{ fontSize: '1.5rem', marginRight: '0.75rem' }}>&gt;</span>
           <input
-            ref={inputRef}
             type="text"
             value={userInput}
             onChange={(e) => setUserInput(e.target.value)}
-            className="w-full bg-transparent text-xl p-2 focus:outline-none placeholder-green-700/50"
-            placeholder={isLoading ? "" : "..."}
+            className="story-input"
+            placeholder={isLoading ? "" : "Hikayeye yön ver..."}
             disabled={isLoading}
             autoFocus
           />
-          {!isLoading && <span className="blinking-cursor text-2xl">_</span>}
         </form>
       </div>
-    </main>
+    </div>
   );
 }
