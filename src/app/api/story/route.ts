@@ -44,7 +44,7 @@ export async function POST(req: Request) {
   try {
     const body = await req.json();
     
-    let historyForApi = body.history.map((msg: { role: string; content: string }) => ({
+    const historyForApi = body.history.map((msg: { role: string; content: string }) => ({
       role: msg.role === 'assistant' ? 'model' : 'user',
       parts: [{ text: msg.content }],
     }));
