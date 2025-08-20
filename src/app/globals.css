@@ -1,0 +1,25 @@
+/* app/globals.css veya src/app/globals.css */
+
+@import "tailwindcss/preflight";
+@import "tailwindcss/utilities";
+
+/* Önceki cevaptaki animasyon kodları buradaydı. 
+  Eğer sildiysen tekrar ekleyebilirsin.
+*/
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.fade-in {
+  animation: fadeIn 0.5s ease-in-out;
+}
+
+@keyframes blink {
+  50% { opacity: 0; }
+}
+
+.blinking-cursor {
+  animation: blink 1s step-end infinite;
+  font-weight: bold;
+}
