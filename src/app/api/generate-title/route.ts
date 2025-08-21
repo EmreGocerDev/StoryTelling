@@ -21,7 +21,7 @@ export async function POST(req: Request) {
 
     const result = await model.generateContent(prompt);
     const response = result.response;
-    let title = response.text().trim().replace(/"/g, ''); // Tırnak işaretlerini temizle
+    const title = response.text().trim().replace(/"/g, ''); // Tırnak işaretlerini temizle
 
     return NextResponse.json({ title });
 
