@@ -77,22 +77,22 @@ button, input, textarea { font-family: inherit; }
 .character-tooltip p { margin-bottom: 0.5rem; }
 .character-tooltip p:last-child { margin-bottom: 0; }
 
-/* ---------- MODAL PENCERESİ STİLLERİ ---------- */
+/* ---------- MODAL PENCERESİ STİLLERİ (GÜNCELLENDİ) ---------- */
 .modal-overlay { position: fixed; inset: 0; background-color: rgba(0, 0, 0, 0.75); display: flex; justify-content: center; align-items: center; z-index: 1000; animation: fadeIn 0.3s ease-in-out; }
-.modal-content { background-color: #0a0a0a; border: 1px solid white; padding: 2rem; border-radius: 4px; width: 90%; max-width: 900px; color: white; display: flex; flex-direction: column; gap: 1rem; }
-.modal-content h2 { font-size: 2rem; text-align: center; }
-.modal-content label { color: #888; text-transform: uppercase; font-size: 0.8rem; margin-top: 1rem; }
-.modal-content hr.modal-divider { width: 100%; border: none; border-top: 1px solid #333; margin: 1rem 0; }
-.modal-actions { display: flex; gap: 1rem; justify-content: center; margin-top: 1rem; }
+.modal-content { background-color: #0a0a0a; border: 1px solid white; padding: 2rem; border-radius: 4px; width: 90%; max-width: 900px; color: white; display: flex; flex-direction: column; gap: 1rem; max-height: 90vh; /* Yüksekliği sınırlıyoruz */ }
+.modal-content h2 { font-size: 2rem; text-align: center; flex-shrink: 0; }
+.modal-content label { color: #888; text-transform: uppercase; font-size: 0.8rem; margin-top: 1rem; flex-shrink: 0; }
+.modal-content hr.modal-divider { width: 100%; border: none; border-top: 1px solid #333; margin: 1rem 0; flex-shrink: 0; }
+.modal-actions { display: flex; gap: 1rem; justify-content: center; margin-top: 1rem; flex-shrink: 0; }
 .close-button { background: none; border: 1px solid #555; color: #ccc; padding: 0.75rem 1.5rem; border-radius: 2px; cursor: pointer; font-size: 1rem; }
 .close-button:hover { background-color: #222; }
 .custom-prompt-area textarea { width: 100%; background-color: transparent; border: 1px solid #555; color: white; padding: 0.75rem; font-size: 1rem; border-radius: 2px; }
 .custom-prompt-area textarea:focus { outline: none; border-color: white; }
-.difficulty-selection { display: flex; gap: 1rem; }
+.difficulty-selection { display: flex; gap: 1rem; flex-shrink: 0; }
 .difficulty-button { flex: 1; background-color: transparent; border: 1px solid #555; color: #ccc; padding: 0.75rem; border-radius: 2px; cursor: pointer; transition: all 0.2s; }
 .difficulty-button:hover { background-color: #222; border-color: #fff; }
 .difficulty-button.active { background-color: #333; border-color: #fff; color: #fff; }
-.mode-selection.main-modes { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 1rem; }
+.mode-selection.main-modes { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 1rem; flex-shrink: 0; }
 .mode-selection.main-modes .mode-button { display: flex; flex-direction: column; text-align: left; height: 100%; background-color: transparent; border: 1px solid #555; color: #ccc; padding: 1rem; border-radius: 2px; cursor: pointer; transition: all 0.2s; }
 .mode-selection.main-modes .mode-button:hover { background-color: #222; border-color: #fff; }
 .mode-selection.main-modes .mode-button.active { background-color: #333; border-color: #fff; color: #fff; }
@@ -102,7 +102,7 @@ button, input, textarea { font-family: inherit; }
 .notes-textarea:focus { outline: none; border-color: white; }
 
 /* --- CAROUSEL STİLLERİ --- */
-.legend-carousel-container { position: relative; width: 100%; padding: 0 2.5rem; }
+.legend-carousel-container { position: relative; width: 100%; padding: 0 2.5rem; flex-shrink: 0; }
 .legend-carousel-track { display: flex; overflow-x: auto; scroll-behavior: smooth; scrollbar-width: none; -ms-overflow-style: none; scroll-snap-type: x mandatory; }
 .legend-carousel-track::-webkit-scrollbar { display: none; }
 .legend-carousel-item { flex: 0 0 100%; width: 100%; padding: 0.5rem; scroll-snap-align: start; }
@@ -122,61 +122,37 @@ button, input, textarea { font-family: inherit; }
 .legend-carousel-item .mode-button:hover { background-color: #222; border-color: #FFFFFF; }
 .legend-carousel-item .mode-button.active { background-color: #333; border-color: #FFFFFF; color: #FFFFFF; }
 
+/* --- ARAMA KISMI STİLLERİ (GÜNCELLENDİ) --- */
+.legend-search-wrapper { margin-bottom: 1rem; flex-shrink: 0; }
+.legend-search-input { width: 100%; background-color: #1a1a1a; border: 1px solid #555; color: white; padding: 0.5rem 0.75rem; font-size: 1rem; border-radius: 2px; }
+.legend-search-input:focus { outline: none; border-color: white; }
+.search-results-list { display: flex; flex-direction: column; gap: 0.5rem; overflow-y: auto; padding-right: 0.5rem; flex-grow: 1; min-height: 0; /* Büyüme ve küçülme için kritik */ }
+.search-results-list .mode-button { background-color: #111; color: #FFFFFF; border-color: #444; }
+.search-results-list .mode-button:hover { background-color: #222; border-color: #FFFFFF; }
+.search-results-list .mode-button.active { background-color: #FFFFFF; color: #000000; }
+.search-results-list .mode-button { animation: fadeSlideDown 0.5s ease-out both; }
+.search-results-list .mode-button:nth-child(2) { animation-delay: 0.05s; }
+.search-results-list .mode-button:nth-child(3) { animation-delay: 0.1s; }
+.search-results-list .mode-button:nth-child(4) { animation-delay: 0.15s; }
+
 /* ---------- MOBİL UYUMLULUK ---------- */
 .hamburger-button, .sidebar-overlay { display: none; }
 @media (max-width: 768px) {
-  /* ================== GÜNCELLEME BAŞLANGIÇ ================== */
-  /* Kaydırmayı kapatıp, ekranı doldurma modeline geri dönüyoruz */
-  html, body {
-    overflow: hidden;
-    height: 100vh;
-  }
-  /* Ana kapsayıcıların dikeyde esneyerek alanı doldurmasını sağlıyoruz */
-  .layout-wrapper, .main-layout {
-    height: 100%;
-  }
-  .main-content {
-    display: flex;
-    flex-direction: column;
-    flex-grow: 1;
-    min-height: 0;
-  }
-  .game-wrapper {
-    display: flex;
-    flex-direction: column;
-    flex-grow: 1;
-    min-height: 0;
-  }
-  /* Panelleri ekranın altına, normal akışa alıyoruz */
-  .notes-button, .characters-panel, .inventory-panel {
-    position: relative; /* Absolute'dan relative'e çeviriyoruz */
-    width: 100%;
-    margin-top: 1rem;
-    right: auto;
-    top: auto;
-    bottom: auto;
-    flex-shrink: 0; /* Küçülmelerini engelliyoruz */
-  }
+  html, body { overflow: hidden; height: 100vh; }
+  .layout-wrapper, .main-layout { height: 100%; }
+  .main-content { display: flex; flex-direction: column; flex-grow: 1; min-height: 0; }
+  .game-wrapper { display: flex; flex-direction: column; flex-grow: 1; min-height: 0; order: 1; }
+  .notes-button, .characters-panel, .inventory-panel { position: relative; width: 100%; margin-top: 1rem; right: auto; top: auto; bottom: auto; flex-shrink: 0; }
   .notes-button { order: 2; margin-bottom: 0; }
   .characters-panel { order: 3; }
   .inventory-panel { order: 4; }
-  .game-wrapper { order: 1; }
-  /* ================== GÜNCELLEME BİTİŞ ================== */
-
   .sidebar { width: 100vw; position: fixed; z-index: 50; transform: translateX(-100%); border-right: none; }
   .sidebar.open { transform: translateX(0); }
   .hamburger-button { display: block; position: fixed; top: 1rem; left: 1rem; z-index: 100; background-color: #111; border: 1px solid white; color: white; padding: 0.5rem; border-radius: 4px; }
   .sidebar-overlay { display: block; position: fixed; inset: 0; background-color: rgba(0, 0, 0, 0.6); z-index: 40; opacity: 0; pointer-events: none; transition: opacity 0.3s ease-in-out; }
   .sidebar-overlay.open { opacity: 1; pointer-events: auto; }
   .title { font-size: 1.75rem; }
-
-  /* Modal'ı mobil için daha kompakt yap */
-  .modal-content {
-    padding: 1rem;
-    width: 95%;
-    max-height: 85vh;
-    overflow-y: auto;
-  }
+  .modal-content { padding: 1rem; width: 95%; max-height: 100vh; overflow-y: auto; }
   .modal-content h2 { font-size: 1.5rem; }
   .mode-selection.main-modes .mode-button h3, .mode-button h3 { font-size: 1rem; }
 }
@@ -184,3 +160,7 @@ button, input, textarea { font-family: inherit; }
 /* ---------- ANİMASYONLAR ---------- */
 @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
 .fade-in { animation: fadeIn 0.5s ease-in-out; }
+@keyframes fadeSlideDown {
+  from { opacity: 0; transform: translateY(-10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
