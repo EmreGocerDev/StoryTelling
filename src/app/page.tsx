@@ -215,8 +215,8 @@ export default function Home() {
         const { cleanedMessage, updatedNpcs } = finalParseResult;
         const { newItems } = itemParseResult;
 
-        let finalInventory = [...inventory];
-        let finalNpcs = [...npcs];
+        const finalInventory = [...inventory];
+        const finalNpcs = [...npcs];
 
         if (newItems.length > 0) {
           const uniqueNewItems = newItems.filter(item => !finalInventory.includes(item));
