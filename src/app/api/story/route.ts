@@ -11,7 +11,7 @@ interface NPC {
 const MODEL_NAME = "gemini-1.5-flash-latest";
 const API_KEY = process.env.GOOGLE_API_KEY || "";
 
-function getSystemInstruction(gameMode: string, difficulty: string, inventory: string[], npcs: NPC[], customPrompt?: string): string {
+function getSystemInstruction(gameMode: string, difficulty: string, inventory: string[], npcs: NPC[], customPrompt?: string, legendName?: string): string {
   
   let difficultyPrompt = '';
   switch (difficulty) {
@@ -34,36 +34,41 @@ function getSystemInstruction(gameMode: string, difficulty: string, inventory: s
     ? `Oyuncu şu ana kadar şu karakterlerle tanıştı: ${npcs.map(npc => `${npc.name.replace(/_/g, ' ')} (${npc.state})`).join(', ')}. Anlatımını bu karakterlerin mevcut durumlarına göre tutarlı tut.`
     : `Oyuncu henüz kimseyle tanışmadı.`;
 
-  const characterInstruction = `ÖNEMLİ KURAL: Hikayede yeni bir karakter ortaya çıktığında veya mevcut bir karakterin durumu/görünüşü değiştiğinde, cevabının sonuna özel bir JSON etiketi eklemelisin. Format şu şekilde olmalı: [CHARACTER_UPDATE:{"name": "KARAKTER_ADI", "description": "Kısa fiziksel tanımı.", "state": "O anki ruh hali veya durumu."}] İsimler tek kelime ve büyük harfle olsun (örn: GARDIYAN_BORIS, GIZEMLI_SATICI).`;
+  // ================== DÜZENLEME BAŞLANGIÇ: KURALLAR NETLEŞTİRİLDİ ==================
+  const itemInstruction = `ZORUNLU KURAL 1: Oyuncu bir eşya kazandığında cevabının sonuna MUTLAKA [ITEM_ACQUIRED:ESYA_ADI] etiketini ekle. Eşya isimleri tek kelime ve BÜYÜK HARFLE olsun.`;
   
-  const itemInstruction = `Ayrıca, oyuncu bir eşya kazandığında cevabının sonuna [ITEM_ACQUIRED:ESYA_ADI] etiketini ekle. Eşya isimleri tek kelime ve büyük harfle olsun.`;
+  const characterInstruction = `ZORUNLU KURAL 2: Hikayede yeni bir karakter ortaya çıktığında veya mevcut bir karakterin durumu önemli ölçüde değiştiğinde, cevabının sonuna MUTLAKA şu formatta bir JSON etiketi ekle: [CHARACTER_UPDATE:{"name": "KARAKTER_ADI", "description": "Kısa fiziksel tanımı.", "state": "O anki ruh hali veya durumu."}] İsimler tek kelime ve BÜYÜK HARFLE olsun (örn: GARDIYAN_BORIS). Cevabını göndermeden önce JSON formatının (çift tırnaklar, virgüller) %100 doğru olduğundan emin ol.`;
+  
+  const unbreakableRule = `ZORUNLU KURAL 3: NE OLURSA OLSUN, HİÇBİR KOŞULDA ANLATICI ROLÜNDEN ÇIKMA. Sen bir oyun anlatıcısısın. Asla bir yapay zeka olduğunu söyleme.`;
 
-  const unbreakableRule = `NE OLURSA OLSUN, HİÇBİR KOŞULDA ANLATICI ROLÜNDEN ÇIKMA. Sen bir oyun anlatıcısısın. Asla bir yapay zeka, bir dil modeli veya bir program olduğunu söyleme. Oyuncu sana bunu sorsa bile rolünü koru ve hikayeye devam et.`;
-
-  // ================== YARATICILIK GÜNCELLEMESİ BAŞLANGIÇ ==================
   const creativityRule = `EN ÖNEMLİ KURALIN YARATICILIKTIR. Her yeni oyunu, bir önceki oyundan tamamen farklı ve benzersiz kıl. Verdiğim örneklerden sadece ilham al, onları asla doğrudan kopyalama. Kendi özgün fikirlerini kullanarak oyuncuyu her seferinde şaşırt.`;
 
   const basePrompt = `Anlatımın ikinci tekil şahıs ağzından ("Gidiyorsun", "Görüyorsun" gibi) olsun ve her cevabın sonunda oyuncuya ne yapacağını sor.`;
+  
+  const allCoreRules = `${itemInstruction} ${characterInstruction} ${unbreakableRule}`;
+  // ================== DÜZENLEME BİTİŞ ==================
 
   switch (gameMode) {
+    case 'legends':
+      return `Sen, efsanevi bir hikaye anlatıcısısın. Oyuncunun seçtiği "${legendName}" efsanesini interaktif bir metin tabanlı macera olarak anlatacaksın. Olay örgüsüne sadık kal ama oyuncunun kararlarının gidişatı etkilemesine izin ver. Efsanedeki ikonik karakterleri oyuna dahil et. ${difficultyPrompt} ${inventoryPrompt} ${npcPrompt} ${allCoreRules} ${basePrompt}`;
+
     case 'prison_escape':
-      return `Sen, bir hapishaneden kaçış macera oyununun anlatıcısısın. ${unbreakableRule} ${creativityRule} Oyuna karanlık bir hücrede başlat. Oyuncunun amacı kaçmak. Her yeni oyunda hücrenin, gardiyanların ve olası kaçış yollarının detaylarını rastgele ve farklı bir şekilde oluştur. Bazen hücrede başka bir mahkum olabilir, bazen bir gardiyan uyuyor olabilir, bazen de dışarıda bir fırtına olabilir. ${inventoryPrompt} ${npcPrompt} Oyuncuya etrafı araştırarak bulabileceği, hapishaneden kaçış temasına uygun mantıklı ve her oyunda farklılaşan eşyalar sun. (Örnekler: bükülmüş bir tel, gevşek bir tuğla, eski bir kemik, bir parça sabun). ${itemInstruction} ${characterInstruction} ${basePrompt} Hikaye gerilim dolu ve gizemli olsun. Oyunda başka karakterler (gardiyanlar, diğer mahkumlar) olabilir ve oyuncu onlarla etkileşime geçebilir.`;
+      return `Sen, bir hapishaneden kaçış macera oyununun anlatıcısısın. ${creativityRule} Oyuna karanlık bir hücrede başlat. Her yeni oyunda hücreyi, gardiyanları ve kaçış yollarını rastgele oluştur. ${inventoryPrompt} ${npcPrompt} Oyuncuya bulabileceği mantıklı ve her oyunda farklılaşan eşyalar sun. Oyunda başka karakterler olabilir. ${allCoreRules} ${basePrompt} Hikaye gerilim dolu olsun.`;
     
     case 'detective':
-      return `Sen, bir polisiye gizem macera oyununun anlatıcısısın. ${unbreakableRule} ${creativityRule} Oyuna bir cinayet mahali ve bir kurban sunarak başla. Her yeni oyunda kurban, mekan, şüpheliler ve ipuçları tamamen farklı ve özgün olmalı. Klasik dedektif hikayelerinden ilham al ama asla klişelere saplanıp kalma; beklenmedik tanıklar, sahte ipuçları ve ahlaki ikilemler ekle. Çözülmesi gereken bir gizem var: Katil kim, cinayet silahı ne ve cinayetin sebebi ne? Bu üç bilgiyi oyunun başında gizli tut. ${difficultyPrompt} ${inventoryPrompt} ${npcPrompt} ${itemInstruction} ${characterInstruction} ${basePrompt} Hikaye karanlık ve gizemli olsun.`;
+      return `Sen, bir polisiye gizem macera oyununun anlatıcısısın. ${creativityRule} Her yeni oyunda kurban, mekan, şüpheliler ve ipuçları tamamen farklı ve özgün olmalı. Çözülmesi gereken bir gizem (katil, silah, sebep) var ve bunu gizli tut. ${difficultyPrompt} ${inventoryPrompt} ${npcPrompt} ${allCoreRules} ${basePrompt} Hikaye karanlık ve gizemli olsun.`;
     
     case 'custom':
-      return `Sen, metin tabanlı bir macera oyununun anlatıcısısın. ${unbreakableRule} ${basePrompt} Senin tek görevin, aşağıdaki kullanıcı isteğini HARFİYEN uygulamaktır. Kendi temalarını (korku, gizem vb.) ASLA ekleme. Sadece kullanıcının yazdığı evreni, kuralları ve tonu anlat. ${difficultyPrompt} ${inventoryPrompt} ${npcPrompt} ${itemInstruction} ${characterInstruction}\n\n--- KULLANICI İSTEĞİ ---\n${customPrompt || 'Genel bir fantastik macera.'}\n--- KULLANICI İSTEĞİ BİTTİ ---`;
+      return `Sen, metin tabanlı bir macera oyununun anlatıcısısın. Tek görevin, aşağıdaki kullanıcı isteğini HARFİYEN uygulamaktır. Kendi temalarını ASLA ekleme. ${difficultyPrompt} ${inventoryPrompt} ${npcPrompt} ${allCoreRules} ${basePrompt}\n\n--- KULLANICI İSTEĞİ ---\n${customPrompt || 'Genel bir fantastik macera.'}\n--- KULLANICI İSTEĞİ BİTTİ ---`;
 
     default: // classic
-      return `Sen, metin tabanlı bir macera oyununun gizemli anlatıcısısın. ${unbreakableRule} ${creativityRule} Görevin, oyuncunun kararlarına göre hikayeyi sürdürmektir. Her seferinde tamamen farklı ve beklenmedik bir macera ile başla. Bir oyun fantastik bir ormanda, bir diğeri siberpunk bir şehirde, bir başkası ise gizemli bir adada geçebilir. Yaratıcılığının sınırı yok. Oyuncuyu sürekli merak içinde bırakacak özgün dünyalar ve karakterler yarat. ${difficultyPrompt} ${inventoryPrompt} ${npcPrompt} ${itemInstruction} ${characterInstruction} ${basePrompt} Oyuna başlarken ilgi çekici bir giriş yap. Hikaye karanlık ve gizemli bir tonda olsun.`;
+      return `Sen, metin tabanlı bir macera oyununun gizemli anlatıcısısın. ${creativityRule} Her seferinde tamamen farklı ve beklenmedik bir macera ile başla. ${difficultyPrompt} ${inventoryPrompt} ${npcPrompt} ${allCoreRules} ${basePrompt} Hikaye karanlık ve gizemli bir tonda olsun.`;
   }
-  // ================== YARATICILIK GÜNCELLEMESİ BİTİŞ ==================
 }
 
-async function runChat(history: { role: 'user' | 'model'; parts: { text: string }[] }[], gameMode: string, difficulty: string, inventory: string[], npcs: NPC[], customPrompt?: string) {
+async function runChat(history: { role: 'user' | 'model'; parts: { text: string }[] }[], gameMode: string, difficulty: string, inventory: string[], npcs: NPC[], customPrompt?: string, legendName?: string) {
   const genAI = new GoogleGenerativeAI(API_KEY);
-  const systemInstruction = getSystemInstruction(gameMode, difficulty, inventory, npcs, customPrompt);
+  const systemInstruction = getSystemInstruction(gameMode, difficulty, inventory, npcs, customPrompt, legendName);
   const model = genAI.getGenerativeModel({ model: MODEL_NAME, systemInstruction });
 
   const generationConfig = { temperature: 0.95, topK: 1, topP: 1, maxOutputTokens: 2048 };
@@ -79,7 +84,7 @@ async function runChat(history: { role: 'user' | 'model'; parts: { text: string 
 export async function POST(req: Request) {
   try {
     const body = await req.json();
-    const { history, game_mode = 'classic', difficulty = 'normal', custom_prompt, inventory = [], npcs = [] } = body;
+    const { history, game_mode = 'classic', difficulty = 'normal', custom_prompt, inventory = [], npcs = [], legend_name } = body;
     
     const historyForApi = history.map((msg: { role: string; content: string }) => ({
       role: msg.role === 'assistant' ? 'model' : 'user',
@@ -92,7 +97,7 @@ export async function POST(req: Request) {
         historyForApi.unshift({ role: 'user', parts: [{ text: 'Oyunu başlat.' }] });
     }
 
-    const responseMessage = await runChat(historyForApi, game_mode, difficulty, inventory, npcs, custom_prompt);
+    const responseMessage = await runChat(historyForApi, game_mode, difficulty, inventory, npcs, custom_prompt, legend_name);
     
     return NextResponse.json({ message: responseMessage });
   } catch (error) {

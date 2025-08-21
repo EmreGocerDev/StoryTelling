@@ -11,10 +11,9 @@ import NoteModal from '@/components/NoteModal';
 import InventoryPanel from '@/components/InventoryPanel';
 import CharactersPanel from '@/components/CharactersPanel';
 
-// Gerekli tipleri doğrudan bu dosyada tanımlıyoruz
 interface Message { role: 'user' | 'assistant'; content: string; }
 interface NPC { name: string; description: string; state: string; }
-interface Story { id: number; created_at: string; history: Message[] | null; user_id: string; title?: string; game_mode?: string; custom_prompt?: string; notes?: string; difficulty?: string; inventory?: string[] | null; npcs?: NPC[] | null; }
+interface Story { id: number; created_at: string; history: Message[] | null; user_id: string; title?: string; game_mode?: string; custom_prompt?: string; notes?: string; difficulty?: string; inventory?: string[] | null; npcs?: NPC[] | null; legend_name?: string; }
 
 const TYPE_SPEED = 20;
 const STORY_LIMIT = 10;
@@ -67,6 +66,8 @@ export default function Home() {
   const [currentNotes, setCurrentNotes] = useState("");
   const [inventory, setInventory] = useState<string[]>([]);
   const [npcs, setNpcs] = useState<NPC[]>([]);
+  const [isInventoryOpen, setIsInventoryOpen] = useState(true);
+  const [isCharactersOpen, setIsCharactersOpen] = useState(true);
 
   const fetchStories = useCallback(async (user: User) => {
     const { data } = await supabase.from('games').select('*').eq('user_id', user.id).order('created_at', { ascending: false });
@@ -104,7 +105,8 @@ export default function Home() {
             difficulty: activeStory.difficulty, 
             custom_prompt: activeStory.custom_prompt, 
             inventory: activeStory.inventory || [],
-            npcs: activeStory.npcs || []
+            npcs: activeStory.npcs || [],
+            legend_name: activeStory.legend_name
         }),
         headers: { 'Content-Type': 'application/json' }
       })
@@ -124,16 +126,16 @@ export default function Home() {
 
         const titleResponse = await fetch('/api/generate-title', { method: 'POST', body: JSON.stringify({ storyText: cleanedMessage }), headers: { 'Content-Type': 'application/json' }});
         const { title } = await titleResponse.json();
-        const finalTitle = title || "İsimsiz Macera";
         
-        const { data: updatedStory, error } = await supabase.from('games').update({ 
+        // ================== BAŞLIK DÜZELTMESİ ==================
+        const finalTitle = title || activeStory.title || "İsimsiz Macera";
+        
+        const { data: updatedStory } = await supabase.from('games').update({ 
             history: initialHistory, 
             title: finalTitle,
             inventory: initialInventory,
             npcs: initialNpcs
         }).eq('id', activeStory.id).select().single();
-        
-        if (error) { console.error("İlk hikaye güncelleme hatası:", error); }
         
         if (updatedStory) {
           const finalUpdatedStory = updatedStory as Story;
@@ -149,11 +151,20 @@ export default function Home() {
     }
   }, [activeStory, supabase]);
 
-  const handleStartStory = useCallback(async (mode: string, difficulty: string, prompt?: string) => {
+  const handleStartStory = useCallback(async (mode: string, difficulty: string, prompt?: string, legendName?: string) => {
     if (!session?.user || stories.length >= STORY_LIMIT) return;
     setIsGameModeModalOpen(false);
     setIsLoading(true);
-    const { data: newStoryData } = await supabase.from('games').insert({ user_id: session.user.id, title: "Yeni Macera...", game_mode: mode, difficulty: difficulty, custom_prompt: prompt, inventory: [], npcs: [] }).select().single();
+    const { data: newStoryData } = await supabase.from('games').insert({ 
+        user_id: session.user.id, 
+        title: legendName || "Yeni Macera...", 
+        game_mode: mode, 
+        difficulty: difficulty, 
+        custom_prompt: prompt, 
+        legend_name: legendName,
+        inventory: [], 
+        npcs: [] 
+    }).select().single();
     if (newStoryData) {
       setStories(current => [newStoryData as Story, ...current]);
       setActiveStory(newStoryData as Story);
@@ -162,8 +173,7 @@ export default function Home() {
 
   const handleSaveNotes = async (newNotes: string) => {
     if (!activeStory) return;
-    const { data, error } = await supabase.from('games').update({ notes: newNotes }).eq('id', activeStory.id).select().single();
-    if (error) { console.error('Notları kaydederken hata:', error); return; }
+    const { data } = await supabase.from('games').update({ notes: newNotes }).eq('id', activeStory.id).select().single();
     if (data) {
         const updatedStory = data as Story;
         setActiveStory(updatedStory);
@@ -192,39 +202,26 @@ export default function Home() {
     setHistory(newHistoryWithUser);
     setUserInput('');
     setIsLoading(true);
-    
     try {
       const response = await fetch('/api/story', {
         method: 'POST',
-        body: JSON.stringify({
-          history: newHistoryWithUser,
-          game_mode: activeStory.game_mode,
-          difficulty: activeStory.difficulty,
-          custom_prompt: activeStory.custom_prompt,
-          inventory: inventory,
-          npcs: npcs
-        }),
+        body: JSON.stringify({ history: newHistoryWithUser, game_mode: activeStory.game_mode, difficulty: activeStory.difficulty, custom_prompt: activeStory.custom_prompt, inventory: inventory, npcs: npcs, legend_name: activeStory.legend_name }),
         headers: { 'Content-Type': 'application/json' }
       });
       const data = await response.json();
-      
       if (data.message) {
         const itemParseResult = parseResponseForItems(data.message);
         const finalParseResult = parseResponseForCharacters(itemParseResult.cleanedMessage);
-        
         const { cleanedMessage, updatedNpcs } = finalParseResult;
         const { newItems } = itemParseResult;
-
         const finalInventory = [...inventory];
         const finalNpcs = [...npcs];
-
         if (newItems.length > 0) {
           const uniqueNewItems = newItems.filter(item => !finalInventory.includes(item));
           if(uniqueNewItems.length > 0) {
             finalInventory.push(...uniqueNewItems);
           }
         }
-        
         if (updatedNpcs.length > 0) {
             updatedNpcs.forEach(updatedNpc => {
                 const existingNpcIndex = finalNpcs.findIndex(npc => npc.name === updatedNpc.name);
@@ -235,15 +232,8 @@ export default function Home() {
                 }
             });
         }
-
         const finalHistory: Message[] = [...newHistoryWithUser, { role: 'assistant', content: cleanedMessage }];
-        
-        const { data: updatedStory } = await supabase.from('games').update({ 
-            history: finalHistory, 
-            inventory: finalInventory,
-            npcs: finalNpcs
-        }).eq('id', activeStory.id).select().single();
-        
+        const { data: updatedStory } = await supabase.from('games').update({ history: finalHistory, inventory: finalInventory, npcs: finalNpcs }).eq('id', activeStory.id).select().single();
         if (updatedStory) {
             const finalUpdatedStory = updatedStory as Story;
             setStories(current => current.map(s => s.id === activeStory.id ? finalUpdatedStory : s));
@@ -260,7 +250,7 @@ export default function Home() {
       setIsLoading(false);
     }
   };
-  
+
   const handleLogout = async () => {
     await supabase.auth.signOut();
     router.push('/login');
@@ -270,7 +260,7 @@ export default function Home() {
     storyContainerRef.current?.scrollTo(0, storyContainerRef.current.scrollHeight);
     if (!isLoading && !isTyping) inputRef.current?.focus();
   }, [history, isLoading, isTyping]);
-  
+
   if (!session) return <div>Yönlendiriliyor...</div>;
 
   return (
@@ -294,8 +284,13 @@ export default function Home() {
           </header>
           <main className="main-content">
             {activeStory && <button className="notes-button" onClick={() => setIsNoteModalOpen(true)}>Not Defteri</button>}
-            <CharactersPanel npcs={npcs} />
-            {activeStory?.game_mode === 'prison_escape' && <InventoryPanel items={inventory} />}
+            
+            <CharactersPanel npcs={npcs} isOpen={isCharactersOpen} onToggle={() => setIsCharactersOpen(!isCharactersOpen)} />
+            
+            {activeStory?.game_mode === 'prison_escape' && (
+              <InventoryPanel items={inventory} isOpen={isInventoryOpen} onToggle={() => setIsInventoryOpen(!isInventoryOpen)} />
+            )}
+
             <div className="game-wrapper">
               <div ref={storyContainerRef} className="story-box">
                 {isLoading && history.length === 0 && <p style={{textAlign: 'center'}}>Yeni macera oluşturuluyor...</p>}

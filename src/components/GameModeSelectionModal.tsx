@@ -1,70 +1,137 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useRef } from 'react';
+import { legendsData, LegendCategory, Legend } from '@/lib/legendsData';
 
-type GameMode = 'classic' | 'detective' | 'custom' | 'prison_escape';
+type GameMode = 'classic' | 'detective' | 'custom' | 'prison_escape' | 'legends';
 type Difficulty = 'easy' | 'normal' | 'hard';
 
 interface Props {
-  onStartStory: (mode: GameMode, difficulty: Difficulty, prompt?: string) => void;
+  onStartStory: (mode: GameMode, difficulty: Difficulty, customPrompt?: string, legendName?: string) => void;
   onClose: () => void;
 }
 
 const GameModeSelectionModal: React.FC<Props> = ({ onStartStory, onClose }) => {
-  const [selectedMode, setSelectedMode] = useState<GameMode>('prison_escape');
+  const [selectedMode, setSelectedMode] = useState<GameMode>('classic');
   const [selectedDifficulty, setSelectedDifficulty] = useState<Difficulty>('normal');
   const [customPrompt, setCustomPrompt] = useState('');
+  
+  const [step, setStep] = useState(1);
+  const [selectedCategory, setSelectedCategory] = useState<LegendCategory | null>(null);
+  const [selectedLegend, setSelectedLegend] = useState<Legend | null>(null);
 
-  const handleStart = () => {
-    if (selectedMode === 'custom' && !customPrompt.trim()) {
-      alert('Lütfen özel hikayeniz için bir başlangıç senaryosu yazın.');
-      return;
+  const categoryTrackRef = useRef<HTMLDivElement>(null);
+  const legendTrackRef = useRef<HTMLDivElement>(null);
+
+  const handleScroll = (direction: 'prev' | 'next', ref: React.RefObject<HTMLDivElement | null>) => {
+    if (ref.current) {
+      const scrollAmount = ref.current.clientWidth;
+      ref.current.scrollBy({ 
+        left: direction === 'prev' ? -scrollAmount : scrollAmount, 
+        behavior: 'smooth' 
+      });
     }
-    onStartStory(selectedMode, selectedDifficulty, customPrompt);
   };
 
-  return (
-    <div className="modal-overlay" onClick={onClose}>
-      <div className="modal-content" onClick={(e) => e.stopPropagation()}>
-        <h2>Yeni Bir Maceraya Başla</h2>
-        
-        <label>Oyun Modu Seçin:</label>
-        <div className="mode-selection">
-          <button className={`mode-button ${selectedMode === 'classic' ? 'active' : ''}`} onClick={() => setSelectedMode('classic')}>
-            <h3>Classic Mod</h3>
-            <p>Yapay zekanın tamamen özgün bir macera yaratmasına izin ver.</p>
-          </button>
-          <button className={`mode-button ${selectedMode === 'prison_escape' ? 'active' : ''}`} onClick={() => setSelectedMode('prison_escape')}>
-            <h3>Hapishaneden Kaçış</h3>
-            <p>Bir hücrede uyan, etrafı araştır, eşyaları topla ve kaç!</p>
-          </button>
-          <button className={`mode-button ${selectedMode === 'detective' ? 'active' : ''}`} onClick={() => setSelectedMode('detective')}>
-            <h3>Dedektif Modu</h3>
-            <p>Bir cinayeti araştır, ipuçlarını topla ve katili bul.</p>
-          </button>
-          <button className={`mode-button ${selectedMode === 'custom' ? 'active' : ''}`} onClick={() => setSelectedMode('custom')}>
-            <h3>Özelleştirilmiş</h3>
-            <p>Kendi evrenini ve kurallarını yaz, macera oradan başlasın.</p>
-          </button>
-        </div>
+  const handleModeSelect = (mode: GameMode) => {
+    setSelectedMode(mode);
+    setStep(1);
+    setSelectedCategory(null);
+    setSelectedLegend(null);
+  };
 
-        {selectedMode === 'custom' && (
-          <div className="custom-prompt-area">
-            <textarea value={customPrompt} onChange={(e) => setCustomPrompt(e.target.value)} placeholder="Hikayenizin geçeceği evreni, karakterinizi veya başlangıç senaryosunu buraya yazın..." rows={4} />
+  const handleStart = () => {
+    if (selectedMode === 'custom' && !customPrompt.trim()) { alert('Lütfen özel hikayeniz için bir başlangıç senaryosu yazın.'); return; }
+    if (selectedMode === 'legends' && !selectedLegend) { alert('Lütfen bir efsane seçin.'); return; }
+    onStartStory(selectedMode, selectedDifficulty, customPrompt, selectedLegend?.name);
+  };
+
+  const renderLegendsContent = () => {
+    if (step === 1) {
+      return (
+        <div className="legend-carousel-container">
+          <button className="carousel-nav-button prev" onClick={() => handleScroll('prev', categoryTrackRef)}>&lt;</button>
+          <div className="legend-carousel-track" ref={categoryTrackRef}>
+            {legendsData.map(cat => (
+              <div key={cat.categoryName} className="legend-carousel-item">
+                <button className="mode-button" onClick={() => { setSelectedCategory(cat); setStep(2); }}>
+                  {/* DEĞİŞİKLİK BURADA */}
+                  <h3>{cat.categoryName} <span className="legend-count">({cat.legends.length})</span></h3>
+                </button>
+              </div>
+            ))}
           </div>
-        )}
+          <button className="carousel-nav-button next" onClick={() => handleScroll('next', categoryTrackRef)}>&gt;</button>
+        </div>
+      );
+    }
+    if (step === 2 && selectedCategory) {
+      return (
+        <div className="legend-carousel-container">
+          <button className="carousel-nav-button prev" onClick={() => handleScroll('prev', legendTrackRef)}>&lt;</button>
+          <div className="legend-carousel-track" ref={legendTrackRef}>
+            {selectedCategory.legends.map(legend => (
+              <div key={legend.name} className="legend-carousel-item">
+                <button className={`mode-button ${selectedLegend?.name === legend.name ? 'active' : ''}`} onClick={() => setSelectedLegend(legend)}>
+                  <h3>{legend.name}</h3>
+                  <p>{legend.description}</p>
+                </button>
+              </div>
+            ))}
+          </div>
+          <button className="carousel-nav-button next" onClick={() => handleScroll('next', legendTrackRef)}>&gt;</button>
+        </div>
+      );
+    }
+    return null;
+  };
 
+  const renderContent = () => {
+    if (selectedMode === 'legends') {
+      return (
+        <>
+          {renderLegendsContent()}
+          <div className="modal-actions">
+            <button className="white-button" onClick={handleStart} disabled={!selectedLegend}>Bu Efsaneyle Başla</button>
+            {step === 2 && <button className="close-button" onClick={() => setStep(1)}>Geri</button>}
+          </div>
+        </>
+      );
+    }
+
+    return (
+      <>
+        <div className="custom-prompt-area" style={{display: selectedMode === 'custom' ? 'block' : 'none'}}>
+          <label>Hikayenizin başlangıcını yazın:</label>
+          <textarea value={customPrompt} onChange={(e) => setCustomPrompt(e.target.value)} placeholder="Hikayenizin geçeceği evreni, karakterinizi veya başlangıç senaryosunu buraya yazın..." rows={4} />
+        </div>
         <label>Zorluk Seviyesi Seçin:</label>
         <div className="difficulty-selection">
             <button className={`difficulty-button ${selectedDifficulty === 'easy' ? 'active' : ''}`} onClick={() => setSelectedDifficulty('easy')}>Kolay</button>
             <button className={`difficulty-button ${selectedDifficulty === 'normal' ? 'active' : ''}`} onClick={() => setSelectedDifficulty('normal')}>Normal</button>
             <button className={`difficulty-button ${selectedDifficulty === 'hard' ? 'active' : ''}`} onClick={() => setSelectedDifficulty('hard')}>Zor</button>
         </div>
-
         <div className="modal-actions">
           <button className="white-button" onClick={handleStart}>Maceraya Başla</button>
-          <button className="close-button" onClick={onClose}>Kapat</button>
         </div>
+      </>
+    );
+  };
+
+  return (
+    <div className="modal-overlay" onClick={onClose}>
+      <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+        <h2>Yeni Bir Maceraya Başla</h2>
+        <div className="mode-selection main-modes">
+            <button className={`mode-button ${selectedMode === 'classic' ? 'active' : ''}`} onClick={() => handleModeSelect('classic')}><h3>Classic</h3><p>Yapay zekanın özgün bir macera yaratmasına izin ver.</p></button>
+            <button className={`mode-button ${selectedMode === 'prison_escape' ? 'active' : ''}`} onClick={() => handleModeSelect('prison_escape')}><h3>Hapisten Kaçış</h3><p>Bir hücrede uyan, eşyaları topla ve kaçış yolunu bul.</p></button>
+            <button className={`mode-button ${selectedMode === 'detective' ? 'active' : ''}`} onClick={() => handleModeSelect('detective')}><h3>Dedektif</h3><p>Bir cinayeti araştır, ipuçlarını topla ve katili bul.</p></button>
+            <button className={`mode-button ${selectedMode === 'custom' ? 'active' : ''}`} onClick={() => handleModeSelect('custom')}><h3>Özelleştir</h3><p>Kendi evrenini ve kurallarını sen belirle.</p></button>
+            <button className={`mode-button ${selectedMode === 'legends' ? 'active' : ''}`} onClick={() => handleModeSelect('legends')}><h3>Efsaneler</h3><p>Tarihten ve mitolojiden bir hikayeyi sen yaşa.</p></button>
+        </div>
+        <hr className="modal-divider" />
+        {renderContent()}
+        <button className="close-button" style={{marginTop: '1rem'}} onClick={onClose}>Vazgeç</button>
       </div>
     </div>
   );

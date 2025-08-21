@@ -9,48 +9,35 @@
 html, body {
   background-color: #000000;
   color: #FFFFFF;
-  overflow: hidden;
+  overflow: hidden; /* Dikey ve yatay kaydırma her zaman kapalı */
   height: 100vh;
   width: 100vw;
 }
 :root { --font-vt323: "VT323", monospace; }
 body { font-family: var(--font-vt323); font-size: 16px; }
-button { font-family: inherit; }
+button, input, textarea { font-family: inherit; }
 
 /* ---------- ANA SAYFA DÜZENİ (LAYOUT) ---------- */
 .layout-wrapper { display: flex; height: 100%; position: relative; }
-.main-layout { flex-grow: 1; display: flex; flex-direction: column; height: 100%; padding: 1rem; min-width: 0; /* flex-shrink için önemli */}
-.header { display: flex; justify-content: center; align-items: center; width: 100%; flex-shrink: 0; position: relative; }
+.main-layout { flex-grow: 1; display: flex; flex-direction: column; height: 100%; padding: 1rem; min-width: 0; }
+.header { display: flex; justify-content: center; align-items: center; width: 100%; flex-shrink: 0; position: relative; flex-direction: column; }
 .title { font-size: 3rem; text-align: center; letter-spacing: 0.1em; margin: 0; }
-.main-content { flex-grow: 1; display: flex; justify-content: center; align-items: center; overflow: hidden; margin-top: 1rem; min-height: 0; }
+.header .game-mode-subtitle { font-size: 1rem; color: #888; text-transform: capitalize; letter-spacing: 0.1em; margin-top: -0.5rem; text-align: center; height: 1rem; }
+.main-content { flex-grow: 1; display: flex; justify-content: center; align-items: center; overflow: hidden; margin-top: 1rem; min-height: 0; position: relative; }
 .game-wrapper { width: 100%; max-width: 896px; display: flex; flex-direction: column; height: 100%; }
 
 /* ---------- OYUN EKRANI STİLLERİ ---------- */
-.story-box { flex-grow: 1; border: 1px solid white; padding: 1rem; overflow-y: auto; margin-bottom: 1.5rem; border-radius: 2px; }
+.story-box { flex-grow: 1; border: 1px solid white; padding: 1rem; overflow-y: auto; margin-bottom: 1.5rem; border-radius: 2px; min-height: 0; }
 .story-text { margin-bottom: 1.5rem; white-space: pre-wrap; }
 .user-text { color: #ccc; }
 .input-prompt { display: flex; align-items: center; flex-shrink: 0; }
-.story-input { width: 100%; background: transparent; font-size: 1.125rem; font-family: inherit; padding: 0.5rem; border: none; color: white; }
+.story-input { width: 100%; background: transparent; font-size: 1.125rem; padding: 0.5rem; border: none; color: white; }
 .story-input:focus { outline: none; }
 .story-input::placeholder { color: #6b7280; }
 
-/* ---------- SIDEBAR (YAN MENÜ) STİLLERİ - DÜZELTİLMİŞ ---------- */
-.sidebar {
-  width: 280px;
-  height: 100%;
-  flex-shrink: 0;
-  background-color: #0a0a0a;
-  border-right: 1px solid #333;
-  transition: transform 0.3s ease-in-out;
-}
-
-.sidebar-content-wrapper {
-  display: flex;
-  flex-direction: column;
-  height: 100%;
-  padding: 1rem;
-}
-
+/* ---------- SIDEBAR (YAN MENÜ) STİLLERİ ---------- */
+.sidebar { width: 280px; height: 100%; flex-shrink: 0; background-color: #0a0a0a; border-right: 1px solid #333; transition: transform 0.3s ease-in-out; }
+.sidebar-content-wrapper { display: flex; flex-direction: column; height: 100%; padding: 1rem; }
 .sidebar-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #333; padding-bottom: 1rem; margin-bottom: 1rem; flex-shrink: 0; }
 .sidebar-title { font-size: 1.25rem; }
 .story-list { list-style: none; padding: 0; margin: 0; overflow-y: auto; flex-grow: 1; min-height: 0; }
@@ -61,606 +48,139 @@ button { font-family: inherit; }
 .sidebar-footer { margin-top: auto; padding-top: 1rem; border-top: 1px solid #333; flex-shrink: 0; }
 .sidebar-user-email { font-size: 0.875rem; color: #888; text-align: center; margin-bottom: 1rem; word-break: break-all; }
 .story-limit-warning { font-size: 0.8rem; color: #ffcc00; margin-top: 1rem; text-align: center; }
+.story-mode-badge { font-size: 0.7rem; padding: 0.1rem 0.4rem; background-color: #444; border-radius: 4px; margin-left: 0.5rem; text-transform: capitalize; color: #ccc; }
 
 /* ---------- BUTON STİLLERİ ---------- */
-.white-button {
-  background-color: white; color: black; border: 1px solid white; padding: 0.75rem; cursor: pointer; border-radius: 2px; width: 100%; font-size: 1rem; transition: background-color 0.2s;
-}
+.white-button { background-color: white; color: black; border: 1px solid white; padding: 0.75rem; cursor: pointer; border-radius: 2px; width: 100%; font-size: 1rem; transition: background-color 0.2s; }
 .white-button:hover:not(:disabled) { background-color: #ccc; }
 .white-button:disabled { background-color: #333; color: #777; border-color: #555; cursor: not-allowed; }
 .new-story-button { font-size: 1rem; padding: 0.5rem 1rem; width: auto; }
-.logout-button { font-size: 1rem; }
 .delete-button { background: none; border: none; color: #ff4d4d; cursor: pointer; font-size: 0.8rem; padding-left: 1rem; }
+
+/* ---------- OYUN İÇİ PANELLER (Not Defteri, Envanter, Kişiler) ---------- */
+.notes-button { position: absolute; top: 1rem; right: 1rem; background-color: #111; border: 1px solid white; color: white; padding: 0.5rem 1rem; border-radius: 4px; cursor: pointer; z-index: 10; font-size: 1rem; }
+.notes-button:hover { background-color: #333; }
+.inventory-panel, .characters-panel { position: absolute; right: 1rem; width: 200px; background-color: rgba(10, 10, 10, 0.8); border: 1px solid #555; border-radius: 4px; z-index: 10; padding: 0; }
+.inventory-panel { bottom: 1rem; }
+.characters-panel { top: 5rem; }
+.panel-header { display: flex; justify-content: space-between; align-items: center; cursor: pointer; padding: 0.5rem 1rem; border-bottom: 1px solid #555; }
+.panel-header h4 { font-size: 1.1rem; }
+.panel-toggle-icon { font-size: 0.8rem; }
+.panel-content { padding: 0.5rem 1rem 1rem 1rem; }
+.inventory-panel ul, .characters-panel ul { list-style: none; padding: 0; }
+.inventory-item, .character-item { padding: 0.25rem 0; text-transform: capitalize; }
+.inventory-empty { color: #888; font-size: 0.9rem; text-align: center; }
+.character-item { position: relative; cursor: default; border-bottom: 1px solid #333; }
+.character-item:last-child { border-bottom: none; }
+.character-tooltip { display: none; position: absolute; bottom: 100%; right: 0; width: 250px; background-color: #000; border: 1px solid #777; padding: 0.75rem; border-radius: 4px; z-index: 20; margin-bottom: 0.5rem; font-size: 0.9rem; }
+.character-item:hover .character-tooltip { display: block; }
+.character-tooltip p { margin-bottom: 0.5rem; }
+.character-tooltip p:last-child { margin-bottom: 0; }
+
+/* ---------- MODAL PENCERESİ STİLLERİ ---------- */
+.modal-overlay { position: fixed; inset: 0; background-color: rgba(0, 0, 0, 0.75); display: flex; justify-content: center; align-items: center; z-index: 1000; animation: fadeIn 0.3s ease-in-out; }
+.modal-content { background-color: #0a0a0a; border: 1px solid white; padding: 2rem; border-radius: 4px; width: 90%; max-width: 900px; color: white; display: flex; flex-direction: column; gap: 1rem; }
+.modal-content h2 { font-size: 2rem; text-align: center; }
+.modal-content label { color: #888; text-transform: uppercase; font-size: 0.8rem; margin-top: 1rem; }
+.modal-content hr.modal-divider { width: 100%; border: none; border-top: 1px solid #333; margin: 1rem 0; }
+.modal-actions { display: flex; gap: 1rem; justify-content: center; margin-top: 1rem; }
+.close-button { background: none; border: 1px solid #555; color: #ccc; padding: 0.75rem 1.5rem; border-radius: 2px; cursor: pointer; font-size: 1rem; }
+.close-button:hover { background-color: #222; }
+.custom-prompt-area textarea { width: 100%; background-color: transparent; border: 1px solid #555; color: white; padding: 0.75rem; font-size: 1rem; border-radius: 2px; }
+.custom-prompt-area textarea:focus { outline: none; border-color: white; }
+.difficulty-selection { display: flex; gap: 1rem; }
+.difficulty-button { flex: 1; background-color: transparent; border: 1px solid #555; color: #ccc; padding: 0.75rem; border-radius: 2px; cursor: pointer; transition: all 0.2s; }
+.difficulty-button:hover { background-color: #222; border-color: #fff; }
+.difficulty-button.active { background-color: #333; border-color: #fff; color: #fff; }
+.mode-selection.main-modes { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 1rem; }
+.mode-selection.main-modes .mode-button { display: flex; flex-direction: column; text-align: left; height: 100%; background-color: transparent; border: 1px solid #555; color: #ccc; padding: 1rem; border-radius: 2px; cursor: pointer; transition: all 0.2s; }
+.mode-selection.main-modes .mode-button:hover { background-color: #222; border-color: #fff; }
+.mode-selection.main-modes .mode-button.active { background-color: #333; border-color: #fff; color: #fff; }
+.mode-selection.main-modes .mode-button h3 { font-size: 1.1rem; margin-bottom: 0.5rem; }
+.mode-selection.main-modes .mode-button p { font-size: 0.9rem; flex-grow: 1; color: #aaa; }
+.notes-textarea { width: 100%; background-color: #000; border: 1px solid #555; color: #ddd; padding: 0.75rem; font-size: 1rem; line-height: 1.6; border-radius: 2px; resize: vertical; }
+.notes-textarea:focus { outline: none; border-color: white; }
+
+/* --- CAROUSEL STİLLERİ --- */
+.legend-carousel-container { position: relative; width: 100%; padding: 0 2.5rem; }
+.legend-carousel-track { display: flex; overflow-x: auto; scroll-behavior: smooth; scrollbar-width: none; -ms-overflow-style: none; scroll-snap-type: x mandatory; }
+.legend-carousel-track::-webkit-scrollbar { display: none; }
+.legend-carousel-item { flex: 0 0 100%; width: 100%; padding: 0.5rem; scroll-snap-align: start; }
+.legend-carousel-item .mode-button { width: 100%; }
+@media (min-width: 768px) { .legend-carousel-item { flex-basis: 50%; width: 50%; } }
+@media (min-width: 1024px) { .legend-carousel-item { flex-basis: 25%; width: 25%; } }
+.carousel-nav-button { display: none; position: absolute; top: 50%; transform: translateY(-50%); background-color: rgba(255, 255, 255, 0.1); border: 1px solid #fff; color: #fff; width: 40px; height: 40px; border-radius: 50%; cursor: pointer; z-index: 10; font-size: 1.5rem; justify-content: center; align-items: center; }
+.carousel-nav-button:hover { background-color: rgba(255, 255, 255, 0.2); }
+.carousel-nav-button.prev { left: -10px; }
+.carousel-nav-button.next { right: -10px; }
+@media (min-width: 1024px) { .carousel-nav-button { display: flex; } }
+.legend-count { font-size: 0.9em; color: #888; margin-left: 0.5em; font-weight: normal; }
+.legend-carousel-item .mode-button { background-color: transparent; color: #ccc; border: 1px solid #555; padding: 1rem; height: 100%; display: flex; flex-direction: column; }
+.legend-carousel-item .mode-button h3 { text-align: center; margin: auto; }
+.legend-carousel-item .mode-button h3:not(:only-child) { margin: 0 0 0.5rem 0; text-align: left; }
+.legend-carousel-item .mode-button p { font-size: 0.9rem; flex-grow: 1; color: #aaa; text-align: left; }
+.legend-carousel-item .mode-button:hover { background-color: #222; border-color: #FFFFFF; }
+.legend-carousel-item .mode-button.active { background-color: #333; border-color: #FFFFFF; color: #FFFFFF; }
 
 /* ---------- MOBİL UYUMLULUK ---------- */
 .hamburger-button, .sidebar-overlay { display: none; }
-@media (max-width: 1024px) {
-    /* Geniş ekran olmayan tablet ve telefonlarda paneli gizle */
-    .kick-chat-panel, .kick-toggle-button {
-        display: none;
-    }
-}
-
 @media (max-width: 768px) {
-  .sidebar {
-    width: 280px;
-    position: fixed;
-    z-index: 1000;
-    transform: translateX(-100%);
-    border-right: none;
+  /* ================== GÜNCELLEME BAŞLANGIÇ ================== */
+  /* Kaydırmayı kapatıp, ekranı doldurma modeline geri dönüyoruz */
+  html, body {
+    overflow: hidden;
+    height: 100vh;
   }
-  .sidebar.open {
-    transform: translateX(0);
+  /* Ana kapsayıcıların dikeyde esneyerek alanı doldurmasını sağlıyoruz */
+  .layout-wrapper, .main-layout {
+    height: 100%;
   }
-  .hamburger-button {
-    display: block;
-    position: fixed;
-    top: 1rem;
-    left: 1rem;
-    z-index: 1001;
-    background-color: #111;
-    border: 1px solid white;
-    color: white;
-    padding: 0.5rem;
-    border-radius: 4px;
+  .main-content {
+    display: flex;
+    flex-direction: column;
+    flex-grow: 1;
+    min-height: 0;
   }
-  .sidebar-overlay {
-    display: block;
-    position: fixed;
-    inset: 0;
-    background-color: rgba(0, 0, 0, 0.6);
-    z-index: 999;
-    opacity: 0;
-    pointer-events: none;
-    transition: opacity 0.3s ease-in-out;
+  .game-wrapper {
+    display: flex;
+    flex-direction: column;
+    flex-grow: 1;
+    min-height: 0;
   }
-  .sidebar-overlay.open {
-    opacity: 1;
-    pointer-events: auto;
+  /* Panelleri ekranın altına, normal akışa alıyoruz */
+  .notes-button, .characters-panel, .inventory-panel {
+    position: relative; /* Absolute'dan relative'e çeviriyoruz */
+    width: 100%;
+    margin-top: 1rem;
+    right: auto;
+    top: auto;
+    bottom: auto;
+    flex-shrink: 0; /* Küçülmelerini engelliyoruz */
   }
+  .notes-button { order: 2; margin-bottom: 0; }
+  .characters-panel { order: 3; }
+  .inventory-panel { order: 4; }
+  .game-wrapper { order: 1; }
+  /* ================== GÜNCELLEME BİTİŞ ================== */
+
+  .sidebar { width: 100vw; position: fixed; z-index: 50; transform: translateX(-100%); border-right: none; }
+  .sidebar.open { transform: translateX(0); }
+  .hamburger-button { display: block; position: fixed; top: 1rem; left: 1rem; z-index: 100; background-color: #111; border: 1px solid white; color: white; padding: 0.5rem; border-radius: 4px; }
+  .sidebar-overlay { display: block; position: fixed; inset: 0; background-color: rgba(0, 0, 0, 0.6); z-index: 40; opacity: 0; pointer-events: none; transition: opacity 0.3s ease-in-out; }
+  .sidebar-overlay.open { opacity: 1; pointer-events: auto; }
   .title { font-size: 1.75rem; }
+
+  /* Modal'ı mobil için daha kompakt yap */
+  .modal-content {
+    padding: 1rem;
+    width: 95%;
+    max-height: 85vh;
+    overflow-y: auto;
+  }
+  .modal-content h2 { font-size: 1.5rem; }
+  .mode-selection.main-modes .mode-button h3, .mode-button h3 { font-size: 1rem; }
 }
 
 /* ---------- ANİMASYONLAR ---------- */
 @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
 .fade-in { animation: fadeIn 0.5s ease-in-out; }
-@keyframes slideInFromRight {
-  from { transform: translateX(100%); }
-  to { transform: translateX(0); }
-}
-
-/* ---------- YENİ KICK CHAT STİLLERİ ---------- */
-.kick-toggle-button {
-  padding: 0.5rem 1rem;
-  font-size: 0.9rem;
-  width: auto;
-  margin-right: 1rem;
-}
-
-.kick-chat-panel {
-  width: 340px;
-  height: 100%;
-  flex-shrink: 0;
-  background-color: #0a0a0a;
-  border-left: 1px solid #333;
-  display: flex;
-  flex-direction: column;
-  padding: 1rem;
-  animation: slideInFromRight 0.3s ease-in-out;
-}
-
-.kick-chat-header {
-  border-bottom: 1px solid #333;
-  padding-bottom: 0.5rem;
-  margin-bottom: 1rem;
-  text-align: center;
-}
-
-.kick-chat-controls form {
-  display: flex;
-  gap: 0.5rem;
-  margin-bottom: 0.5rem;
-}
-
-.kick-channel-input {
-  flex-grow: 1;
-  background: transparent;
-  border: 1px solid #555;
-  color: white;
-  padding: 0.5rem;
-  border-radius: 2px;
-  font-family: inherit;
-  font-size: 0.9rem;
-}
-.kick-channel-input:focus {
-  outline: none;
-  border-color: white;
-}
-
-.kick-set-button {
-  padding: 0.5rem;
-  width: auto;
-  font-size: 0.9rem;
-}
-
-.kick-clear-button {
-  width: 100%;
-  background: #552222;
-  border: 1px solid #883333;
-  color: #ffaaaa;
-  font-family: inherit;
-  font-size: 0.8rem;
-  padding: 0.25rem;
-  border-radius: 2px;
-  cursor: pointer;
-}
-.kick-clear-button:hover {
-  background: #663333;
-}
-
-.kick-no-channel {
-  flex-grow: 1;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: #888;
-  text-align: center;
-  padding: 1rem;
-}
-
-.kick-iframe-wrapper {
-  flex-grow: 1;
-  overflow: hidden;
-  position: relative;
-  margin-top: 1rem;
-  border: 1px solid #333;
-  border-radius: 2px;
-}
-
-.kick-iframe-wrapper iframe {
-  position: absolute;
-  top: 0;
-  left: -20px; /* Videoyu sola kaydırarak gizler */
-  height: 100%;
-  width: calc(100% + 20px); /* Genişliği artırarak videonun tamamen gizlendiğinden emin oluruz */
-}
-/* ---------- MODAL STİLLERİ (globals.css en sonuna eklenecek) ---------- */
-.modal-overlay {
-  position: fixed;
-  inset: 0;
-  background-color: rgba(0, 0, 0, 0.75);
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  z-index: 1000;
-  animation: fadeIn 0.3s ease-in-out;
-}
-
-.modal-content {
-  background-color: #0a0a0a;
-  border: 1px solid white;
-  padding: 2rem;
-  border-radius: 4px;
-  width: 90%;
-  max-width: 600px;
-  color: white;
-  display: flex;
-  flex-direction: column;
-  gap: 1rem;
-}
-
-.modal-content h2 {
-  font-size: 2rem;
-  text-align: center;
-}
-
-.mode-selection {
-  display: flex;
-  gap: 1rem;
-  width: 100%;
-}
-
-.mode-button {
-  flex: 1;
-  background-color: transparent;
-  border: 1px solid #555;
-  color: #ccc;
-  padding: 1rem;
-  border-radius: 2px;
-  cursor: pointer;
-  text-align: left;
-  transition: all 0.2s;
-}
-
-.mode-button:hover {
-  background-color: #222;
-  border-color: #fff;
-}
-
-.mode-button.active {
-  background-color: #333;
-  border-color: #fff;
-  color: #fff;
-}
-
-.mode-button h3 {
-  font-size: 1.25rem;
-  margin-bottom: 0.5rem;
-}
-
-.custom-prompt-area textarea {
-  width: 100%;
-  background-color: transparent;
-  border: 1px solid #555;
-  color: white;
-  padding: 0.75rem;
-  font-family: inherit;
-  font-size: 1rem;
-  border-radius: 2px;
-}
-.custom-prompt-area textarea:focus {
-  outline: none;
-  border-color: white;
-}
-
-.modal-actions {
-  display: flex;
-  gap: 1rem;
-  justify-content: center;
-  margin-top: 1rem;
-}
-
-.close-button {
-  background: none;
-  border: 1px solid #555;
-  color: #ccc;
-  padding: 0.75rem 1.5rem;
-  border-radius: 2px;
-  cursor: pointer;
-  font-size: 1rem;
-}
-.close-button:hover {
-  background-color: #222;
-}
-
-/* Sidebar'daki hikaye modu etiketi için */
-.story-mode-badge {
-  font-size: 0.7rem;
-  padding: 0.1rem 0.4rem;
-  background-color: #444;
-  border-radius: 4px;
-  margin-left: 0.5rem;
-  text-transform: capitalize;
-  color: #ccc;
-}
-/* ---------- NOT DEFTERİ STİLLERİ (globals.css en sonuna eklenecek) ---------- */
-.notes-button {
-  position: absolute;
-  top: 1rem;
-  right: 1rem;
-  background-color: #111;
-  border: 1px solid white;
-  color: white;
-  padding: 0.5rem 1rem;
-  border-radius: 4px;
-  cursor: pointer;
-  z-index: 10;
-  font-size: 1rem;
-}
-
-.notes-button:hover {
-  background-color: #333;
-}
-
-.notes-textarea {
-  width: 100%;
-  background-color: #000;
-  border: 1px solid #555;
-  color: #ddd;
-  padding: 0.75rem;
-  font-family: inherit;
-  font-size: 1rem;
-  line-height: 1.6;
-  border-radius: 2px;
-  resize: vertical;
-}
-
-.notes-textarea:focus {
-  outline: none;
-  border-color: white;
-}
-/* Zorluk seçimi stilleri */
-.modal-content label {
-  color: #888;
-  text-transform: uppercase;
-  font-size: 0.8rem;
-  margin-top: 1rem;
-}
-.difficulty-selection {
-  display: flex;
-  gap: 1rem;
-}
-.difficulty-button {
-  flex: 1;
-  background-color: transparent;
-  border: 1px solid #555;
-  color: #ccc;
-  padding: 0.75rem;
-  border-radius: 2px;
-  cursor: pointer;
-  transition: all 0.2s;
-}
-.difficulty-button:hover {
-  background-color: #222;
-  border-color: #fff;
-}
-.difficulty-button.active {
-  background-color: #333;
-  border-color: #fff;
-  color: #fff;
-}
-/* Başlık altındaki mod adı ve 3'lü mod butonu için stiller */
-.header .game-mode-subtitle {
-  font-size: 1rem;
-  color: #888;
-  text-transform: capitalize;
-  letter-spacing: 0.1em;
-  margin-top: -0.5rem; /* Başlığa yaklaştırmak için */
-  text-align: center;
-  height: 1rem; /* Boşken bile yer kaplasın diye */
-}
-
-/* Modal'daki 3 butonu sığdırmak için */
-.mode-selection {
-  flex-direction: column; /* Küçük ekranlarda alt alta */
-}
-
-@media (min-width: 640px) {
-  .mode-selection {
-    flex-direction: row; /* Geniş ekranlarda yan yana */
-  }
-}
-/* ---------- ENVANTER PANELİ STİLLERİ ---------- */
-.inventory-panel {
-  position: absolute;
-  bottom: 1rem;
-  right: 1rem;
-  width: 200px;
-  background-color: rgba(10, 10, 10, 0.8);
-  border: 1px solid #555;
-  border-radius: 4px;
-  padding: 1rem;
-  z-index: 10;
-}
-.inventory-panel h4 {
-  border-bottom: 1px solid #555;
-  padding-bottom: 0.5rem;
-  margin-bottom: 0.5rem;
-  text-align: center;
-  font-size: 1.1rem;
-}
-.inventory-panel ul {
-  list-style: none;
-  padding: 0;
-}
-.inventory-item {
-  padding: 0.25rem 0;
-  text-transform: capitalize;
-}
-.inventory-empty {
-  color: #888;
-  font-size: 0.9rem;
-  text-align: center;
-}
-/* ---------- MODAL STİLLERİ (globals.css en sonuna eklenecek) ---------- */
-.modal-overlay {
-  position: fixed;
-  inset: 0;
-  background-color: rgba(0, 0, 0, 0.75);
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  z-index: 1000;
-  animation: fadeIn 0.3s ease-in-out;
-}
-
-.modal-content {
-  background-color: #0a0a0a;
-  border: 1px solid white;
-  padding: 2rem;
-  border-radius: 4px;
-  width: 90%;
-  /* YENİ: Maksimum genişliği artırdık */
-  max-width: 900px; 
-  color: white;
-  display: flex;
-  flex-direction: column;
-  gap: 1rem;
-}
-
-.modal-content h2 {
-  font-size: 2rem;
-  text-align: center;
-}
-
-.mode-selection {
-  display: grid; /* YENİ: Grid layout'a geçtik */
-  grid-template-columns: 1fr; /* Mobilde tek sütun */
-  gap: 1rem;
-  width: 100%;
-}
-
-/* Orta boy ekranlarda 2x2 grid */
-@media (min-width: 768px) {
-  .mode-selection {
-    grid-template-columns: repeat(2, 1fr);
-  }
-}
-
-/* Geniş ekranlarda 4'ü yan yana */
-@media (min-width: 1024px) {
-  .mode-selection {
-    grid-template-columns: repeat(4, 1fr);
-  }
-}
-
-.mode-button {
-  background-color: transparent;
-  border: 1px solid #555;
-  color: #ccc;
-  padding: 1rem;
-  border-radius: 2px;
-  cursor: pointer;
-  text-align: left;
-  transition: all 0.2s;
-  display: flex; /* İçeriği dikeyde hizalamak için */
-  flex-direction: column;
-  height: 100%;
-}
-
-.mode-button:hover {
-  background-color: #222;
-  border-color: #fff;
-}
-
-.mode-button.active {
-  background-color: #333;
-  border-color: #fff;
-  color: #fff;
-}
-
-.mode-button h3 {
-  font-size: 1.25rem;
-  margin-bottom: 0.5rem;
-}
-.mode-button p {
-    font-size: 0.9rem;
-    flex-grow: 1; /* Açıklamaların aynı hizada bitmesini sağlar */
-}
-
-
-.custom-prompt-area textarea {
-  width: 100%;
-  background-color: transparent;
-  border: 1px solid #555;
-  color: white;
-  padding: 0.75rem;
-  font-size: 1rem;
-  border-radius: 2px;
-}
-.custom-prompt-area textarea:focus {
-  outline: none;
-  border-color: white;
-}
-
-.modal-actions {
-  display: flex;
-  gap: 1rem;
-  justify-content: center;
-  margin-top: 1rem;
-}
-
-.close-button {
-  background: none;
-  border: 1px solid #555;
-  color: #ccc;
-  padding: 0.75rem 1.5rem;
-  border-radius: 2px;
-  cursor: pointer;
-  font-size: 1rem;
-}
-.close-button:hover {
-  background-color: #222;
-}
-
-/* Zorluk seçimi stilleri */
-.modal-content label {
-  color: #888;
-  text-transform: uppercase;
-  font-size: 0.8rem;
-  margin-top: 1rem;
-}
-.difficulty-selection {
-  display: flex;
-  gap: 1rem;
-}
-.difficulty-button {
-  flex: 1;
-  background-color: transparent;
-  border: 1px solid #555;
-  color: #ccc;
-  padding: 0.75rem;
-  border-radius: 2px;
-  cursor: pointer;
-  transition: all 0.2s;
-}
-.difficulty-button:hover {
-  background-color: #222;
-  border-color: #fff;
-}
-.difficulty-button.active {
-  background-color: #333;
-  border-color: #fff;
-  color: #fff;
-}
-/* ---------- KARAKTER PANELİ STİLLERİ ---------- */
-.characters-panel {
-  position: absolute;
-  top: 5rem; /* Not defteri butonunun altına */
-  right: 1rem;
-  width: 200px;
-  background-color: rgba(10, 10, 10, 0.8);
-  border: 1px solid #555;
-  border-radius: 4px;
-  padding: 1rem;
-  z-index: 10;
-}
-.characters-panel h4 {
-  border-bottom: 1px solid #555;
-  padding-bottom: 0.5rem;
-  margin-bottom: 0.5rem;
-  text-align: center;
-  font-size: 1.1rem;
-}
-.characters-panel ul {
-  list-style: none;
-  padding: 0;
-}
-
-.character-item {
-  position: relative;
-  padding: 0.25rem 0;
-  text-transform: capitalize;
-  cursor: default;
-  border-bottom: 1px solid #333;
-}
-
-.character-item:last-child {
-  border-bottom: none;
-}
-
-.character-tooltip {
-  display: none; /* Normalde gizli */
-  position: absolute;
-  bottom: 100%; /* Öğenin üzerinde çıkar */
-  right: 0;
-  width: 250px;
-  background-color: #000;
-  border: 1px solid #777;
-  padding: 0.75rem;
-  border-radius: 4px;
-  z-index: 20;
-  margin-bottom: 0.5rem;
-  font-size: 0.9rem;
-}
-
-.character-item:hover .character-tooltip {
-  display: block; /* Üzerine gelince görünür yap */
-}
-
-.character-tooltip p {
-  margin-bottom: 0.5rem;
-}
-.character-tooltip p:last-child {
-  margin-bottom: 0;
-}
