@@ -8,18 +8,51 @@ import type { Session, User } from '@supabase/auth-helpers-nextjs';
 import Sidebar from '@/components/Sidebar';
 import GameModeSelectionModal from '@/components/GameModeSelectionModal';
 import NoteModal from '@/components/NoteModal';
+import InventoryPanel from '@/components/InventoryPanel';
+import CharactersPanel from '@/components/CharactersPanel';
 
-// Interface ve Sabitler
+// Gerekli tipleri doğrudan bu dosyada tanımlıyoruz
 interface Message { role: 'user' | 'assistant'; content: string; }
-interface Story { id: number; created_at: string; history: Message[] | null; user_id: string; title?: string; game_mode?: string; custom_prompt?: string; notes?: string; difficulty?: string; }
+interface NPC { name: string; description: string; state: string; }
+interface Story { id: number; created_at: string; history: Message[] | null; user_id: string; title?: string; game_mode?: string; custom_prompt?: string; notes?: string; difficulty?: string; inventory?: string[] | null; npcs?: NPC[] | null; }
+
 const TYPE_SPEED = 20;
 const STORY_LIMIT = 10;
+
+const parseResponseForItems = (message: string): { cleanedMessage: string, newItems: string[] } => {
+  const itemRegex = /\[ITEM_ACQUIRED:([^\]]+)\]/g;
+  const newItems: string[] = [];
+  const matches = message.matchAll(itemRegex);
+  for (const match of matches) {
+    newItems.push(match[1].replace(/_/g, ' '));
+  }
+  const cleanedMessage = message.replace(itemRegex, "").trim();
+  return { cleanedMessage, newItems };
+};
+
+const parseResponseForCharacters = (message: string): { cleanedMessage: string, updatedNpcs: NPC[] } => {
+  const characterRegex = /\[CHARACTER_UPDATE:({.*?)\]/g;
+  const updatedNpcs: NPC[] = [];
+  const matches = message.matchAll(characterRegex);
+  for (const match of matches) {
+    try {
+      const jsonString = match[1];
+      const npcData = JSON.parse(jsonString);
+      if (npcData.name && npcData.description && npcData.state) {
+        updatedNpcs.push(npcData);
+      }
+    } catch (e) {
+      console.error("Karakter JSON'u parse edilemedi:", match[1], e);
+    }
+  }
+  const cleanedMessage = message.replace(characterRegex, "").trim();
+  return { cleanedMessage, updatedNpcs };
+};
 
 export default function Home() {
   const [session, setSession] = useState<Session | null>(null);
   const supabase = createClientComponentClient();
   const router = useRouter();
-
   const [stories, setStories] = useState<Story[]>([]);
   const [activeStory, setActiveStory] = useState<Story | null>(null);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
@@ -29,71 +62,98 @@ export default function Home() {
   const [isTyping, setIsTyping] = useState(false);
   const storyContainerRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
-
   const [isGameModeModalOpen, setIsGameModeModalOpen] = useState(false);
   const [isNoteModalOpen, setIsNoteModalOpen] = useState(false);
   const [currentNotes, setCurrentNotes] = useState("");
-  
+  const [inventory, setInventory] = useState<string[]>([]);
+  const [npcs, setNpcs] = useState<NPC[]>([]);
+
   const fetchStories = useCallback(async (user: User) => {
     const { data } = await supabase.from('games').select('*').eq('user_id', user.id).order('created_at', { ascending: false });
     if (data) setStories(data as Story[]);
   }, [supabase]);
-  
+
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_, session) => {
-      if (!session) router.push('/login');
+      if (!session) { router.push('/login'); } 
       else { setSession(session); fetchStories(session.user); }
     });
     return () => subscription.unsubscribe();
   }, [supabase, router, fetchStories]);
 
   useEffect(() => {
-    if (!activeStory) { setHistory([]); return; }
-    
+    if (!activeStory) {
+      setHistory([]);
+      setInventory([]);
+      setNpcs([]);
+      return;
+    }
     const currentHistory = (activeStory.history as Message[]) || [];
     setHistory(currentHistory);
     setCurrentNotes(activeStory.notes || "");
+    setInventory(activeStory.inventory || []);
+    setNpcs((activeStory.npcs as NPC[]) || []);
     setIsTyping(false);
-    
-    if (currentHistory.length === 0) {
+    if (currentHistory.length === 0 && activeStory.id) {
       setIsLoading(true);
-      fetch('/api/story', { 
-        method: 'POST', 
-        body: JSON.stringify({ history: [], game_mode: activeStory.game_mode, difficulty: activeStory.difficulty, custom_prompt: activeStory.custom_prompt }), 
-        headers: { 'Content-Type': 'application/json' } 
+      fetch('/api/story', {
+        method: 'POST',
+        body: JSON.stringify({ 
+            history: [], 
+            game_mode: activeStory.game_mode, 
+            difficulty: activeStory.difficulty, 
+            custom_prompt: activeStory.custom_prompt, 
+            inventory: activeStory.inventory || [],
+            npcs: activeStory.npcs || []
+        }),
+        headers: { 'Content-Type': 'application/json' }
       })
       .then(res => res.json())
       .then(async (storyData) => {
         if (!storyData.message) return;
-        const initialHistory: Message[] = [{ role: 'assistant', content: storyData.message }];
+
+        const itemParseResult = parseResponseForItems(storyData.message);
+        const finalParseResult = parseResponseForCharacters(itemParseResult.cleanedMessage);
         
-        const titleResponse = await fetch('/api/generate-title', { method: 'POST', body: JSON.stringify({ storyText: storyData.message }), headers: { 'Content-Type': 'application/json' }});
+        const { cleanedMessage, updatedNpcs } = finalParseResult;
+        const { newItems } = itemParseResult;
+
+        const initialHistory: Message[] = [{ role: 'assistant', content: cleanedMessage }];
+        const initialInventory = [...(activeStory.inventory || []), ...newItems];
+        const initialNpcs = [...((activeStory.npcs as NPC[]) || []), ...updatedNpcs];
+
+        const titleResponse = await fetch('/api/generate-title', { method: 'POST', body: JSON.stringify({ storyText: cleanedMessage }), headers: { 'Content-Type': 'application/json' }});
         const { title } = await titleResponse.json();
         const finalTitle = title || "İsimsiz Macera";
         
-        const { data: updatedStory } = await supabase.from('games').update({ history: initialHistory, title: finalTitle }).eq('id', activeStory.id).select().single();
+        const { data: updatedStory, error } = await supabase.from('games').update({ 
+            history: initialHistory, 
+            title: finalTitle,
+            inventory: initialInventory,
+            npcs: initialNpcs
+        }).eq('id', activeStory.id).select().single();
+        
+        if (error) { console.error("İlk hikaye güncelleme hatası:", error); }
+        
         if (updatedStory) {
           const finalUpdatedStory = updatedStory as Story;
           setStories(current => current.map(s => s.id === activeStory.id ? finalUpdatedStory : s));
           setActiveStory(finalUpdatedStory);
-          setHistory(initialHistory);
+          setHistory(finalUpdatedStory.history || []);
+          setInventory(finalUpdatedStory.inventory || []);
+          setNpcs(finalUpdatedStory.npcs || []);
           setIsTyping(true);
         }
       })
       .finally(() => setIsLoading(false));
     }
   }, [activeStory, supabase]);
-  
+
   const handleStartStory = useCallback(async (mode: string, difficulty: string, prompt?: string) => {
     if (!session?.user || stories.length >= STORY_LIMIT) return;
     setIsGameModeModalOpen(false);
     setIsLoading(true);
-
-    const { data: newStoryData } = await supabase
-      .from('games')
-      .insert({ user_id: session.user.id, title: "Yeni Macera...", game_mode: mode, difficulty: difficulty, custom_prompt: prompt })
-      .select().single();
-
+    const { data: newStoryData } = await supabase.from('games').insert({ user_id: session.user.id, title: "Yeni Macera...", game_mode: mode, difficulty: difficulty, custom_prompt: prompt, inventory: [], npcs: [] }).select().single();
     if (newStoryData) {
       setStories(current => [newStoryData as Story, ...current]);
       setActiveStory(newStoryData as Story);
@@ -102,10 +162,8 @@ export default function Home() {
 
   const handleSaveNotes = async (newNotes: string) => {
     if (!activeStory) return;
-    
     const { data, error } = await supabase.from('games').update({ notes: newNotes }).eq('id', activeStory.id).select().single();
     if (error) { console.error('Notları kaydederken hata:', error); return; }
-
     if (data) {
         const updatedStory = data as Story;
         setActiveStory(updatedStory);
@@ -119,14 +177,14 @@ export default function Home() {
     if (selectedStory) setActiveStory(selectedStory);
     setIsSidebarOpen(false);
   }, [stories]);
-  
+
   const handleDeleteStory = async (storyId: number) => {
     if (!window.confirm("Bu hikayeyi silmek istediğinizden emin misiniz?")) return;
     await supabase.from('games').delete().eq('id', storyId);
     setStories(stories.filter(s => s.id !== storyId));
     if (activeStory?.id === storyId) setActiveStory(null);
   };
-  
+
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     if (!userInput.trim() || isLoading || isTyping || !activeStory) return;
@@ -136,21 +194,65 @@ export default function Home() {
     setIsLoading(true);
     
     try {
-      const response = await fetch('/api/story', { 
-        method: 'POST', 
-        body: JSON.stringify({ history: newHistoryWithUser, game_mode: activeStory.game_mode, difficulty: activeStory.difficulty, custom_prompt: activeStory.custom_prompt }), 
+      const response = await fetch('/api/story', {
+        method: 'POST',
+        body: JSON.stringify({
+          history: newHistoryWithUser,
+          game_mode: activeStory.game_mode,
+          difficulty: activeStory.difficulty,
+          custom_prompt: activeStory.custom_prompt,
+          inventory: inventory,
+          npcs: npcs
+        }),
         headers: { 'Content-Type': 'application/json' }
       });
       const data = await response.json();
       
       if (data.message) {
-        const finalHistory: Message[] = [...newHistoryWithUser, { role: 'assistant', content: data.message }];
-        await supabase.from('games').update({ history: finalHistory }).eq('id', activeStory.id);
-        const updatedStory = { ...activeStory, history: finalHistory };
-        setStories(current => current.map(s => s.id === activeStory.id ? updatedStory : s));
-        setActiveStory(updatedStory);
-        setHistory(finalHistory);
-        setIsTyping(true);
+        const itemParseResult = parseResponseForItems(data.message);
+        const finalParseResult = parseResponseForCharacters(itemParseResult.cleanedMessage);
+        
+        const { cleanedMessage, updatedNpcs } = finalParseResult;
+        const { newItems } = itemParseResult;
+
+        let finalInventory = [...inventory];
+        let finalNpcs = [...npcs];
+
+        if (newItems.length > 0) {
+          const uniqueNewItems = newItems.filter(item => !finalInventory.includes(item));
+          if(uniqueNewItems.length > 0) {
+            finalInventory.push(...uniqueNewItems);
+          }
+        }
+        
+        if (updatedNpcs.length > 0) {
+            updatedNpcs.forEach(updatedNpc => {
+                const existingNpcIndex = finalNpcs.findIndex(npc => npc.name === updatedNpc.name);
+                if (existingNpcIndex !== -1) {
+                    finalNpcs[existingNpcIndex] = updatedNpc;
+                } else {
+                    finalNpcs.push(updatedNpc);
+                }
+            });
+        }
+
+        const finalHistory: Message[] = [...newHistoryWithUser, { role: 'assistant', content: cleanedMessage }];
+        
+        const { data: updatedStory } = await supabase.from('games').update({ 
+            history: finalHistory, 
+            inventory: finalInventory,
+            npcs: finalNpcs
+        }).eq('id', activeStory.id).select().single();
+        
+        if (updatedStory) {
+            const finalUpdatedStory = updatedStory as Story;
+            setStories(current => current.map(s => s.id === activeStory.id ? finalUpdatedStory : s));
+            setActiveStory(finalUpdatedStory);
+            setHistory(finalUpdatedStory.history || []);
+            setInventory(finalUpdatedStory.inventory || []);
+            setNpcs(finalUpdatedStory.npcs || []);
+            setIsTyping(true);
+        }
       } else {
         setIsTyping(false);
       }
@@ -175,46 +277,39 @@ export default function Home() {
     <>
       {isGameModeModalOpen && <GameModeSelectionModal onStartStory={handleStartStory} onClose={() => setIsGameModeModalOpen(false)} />}
       {isNoteModalOpen && <NoteModal initialNotes={currentNotes} onSave={handleSaveNotes} onClose={() => setIsNoteModalOpen(false)} />}
-
       <div className="layout-wrapper">
         <div className={`sidebar-overlay ${isSidebarOpen ? 'open' : ''}`} onClick={() => setIsSidebarOpen(false)}></div>
         <button className="hamburger-button" onClick={() => setIsSidebarOpen(!isSidebarOpen)}>☰</button>
         <div className={`sidebar ${isSidebarOpen ? 'open' : ''}`}>
           <Sidebar stories={stories} onNewStory={() => setIsGameModeModalOpen(true)} onSelectStory={handleSelectStory} onDeleteStory={handleDeleteStory} onLogout={handleLogout} storyLimit={STORY_LIMIT} activeStoryId={activeStory?.id ?? null} session={session} />
         </div>
-
         <div className="main-layout">
           <header className="header">
             <div style={{flex: 1}}></div>
-            <h1 className="title">STORYTELLING</h1>
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+              <h1 className="title">STORYTELLING</h1>
+              <p className="game-mode-subtitle">{activeStory ? (activeStory.game_mode?.replace(/_/g, ' ') || 'classic') : ''}</p>
+            </div>
             <div style={{flex: 1}}></div>
           </header>
           <main className="main-content">
             {activeStory && <button className="notes-button" onClick={() => setIsNoteModalOpen(true)}>Not Defteri</button>}
+            <CharactersPanel npcs={npcs} />
+            {activeStory?.game_mode === 'prison_escape' && <InventoryPanel items={inventory} />}
             <div className="game-wrapper">
               <div ref={storyContainerRef} className="story-box">
                 {isLoading && history.length === 0 && <p style={{textAlign: 'center'}}>Yeni macera oluşturuluyor...</p>}
                 {!activeStory && !isLoading && <div><p>Başlamak için yeni bir hikaye oluşturun veya birini seçin.</p></div>}
-                
                 {history.map((msg, index) => {
                   const isLastMessage = index === history.length - 1;
                   return (
                     <div key={`${index}-${msg.content?.slice(0, 10)}`} className="fade-in" style={{ marginBottom: '1.5rem' }}>
                       {msg.role === 'assistant' && isLastMessage && isTyping ? (
                         <p className="story-text">
-                          <Typewriter
-                            words={[msg.content]}
-                            loop={1}
-                            cursor
-                            cursorStyle='_'
-                            typeSpeed={TYPE_SPEED}
-                            onLoopDone={() => setIsTyping(false)}
-                          />
+                          <Typewriter words={[msg.content]} loop={1} cursor cursorStyle='_' typeSpeed={TYPE_SPEED} onLoopDone={() => setIsTyping(false)} />
                         </p>
                       ) : (
-                        <p className={`story-text ${msg.role === 'user' ? 'user-text' : ''}`}>
-                          {msg.role === 'user' ? `> ${msg.content}` : msg.content}
-                        </p>
+                        <p className={`story-text ${msg.role === 'user' ? 'user-text' : ''}`}>{msg.role === 'user' ? `> ${msg.content}` : msg.content}</p>
                       )}
                     </div>
                   );
@@ -222,16 +317,7 @@ export default function Home() {
               </div>
               <form onSubmit={handleSubmit} className="input-prompt">
                 <span>&gt;</span>
-                <input
-                  ref={inputRef}
-                  type="text"
-                  value={userInput}
-                  onChange={(e) => setUserInput(e.target.value)}
-                  className="story-input"
-                  placeholder={!activeStory ? "Önce bir hikaye seç..." : (isLoading || isTyping ? "..." : "Ne yapıyorsun?")}
-                  disabled={!activeStory || isLoading || isTyping}
-                  autoFocus
-                />
+                <input ref={inputRef} type="text" value={userInput} onChange={(e) => setUserInput(e.target.value)} className="story-input" placeholder={!activeStory ? "Önce bir hikaye seç..." : (isLoading || isTyping ? "..." : "Ne yapıyorsun?")} disabled={!activeStory || isLoading || isTyping} autoFocus />
               </form>
             </div>
           </main>

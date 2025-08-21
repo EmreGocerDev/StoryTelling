@@ -399,3 +399,268 @@ button { font-family: inherit; }
   border-color: #fff;
   color: #fff;
 }
+/* Başlık altındaki mod adı ve 3'lü mod butonu için stiller */
+.header .game-mode-subtitle {
+  font-size: 1rem;
+  color: #888;
+  text-transform: capitalize;
+  letter-spacing: 0.1em;
+  margin-top: -0.5rem; /* Başlığa yaklaştırmak için */
+  text-align: center;
+  height: 1rem; /* Boşken bile yer kaplasın diye */
+}
+
+/* Modal'daki 3 butonu sığdırmak için */
+.mode-selection {
+  flex-direction: column; /* Küçük ekranlarda alt alta */
+}
+
+@media (min-width: 640px) {
+  .mode-selection {
+    flex-direction: row; /* Geniş ekranlarda yan yana */
+  }
+}
+/* ---------- ENVANTER PANELİ STİLLERİ ---------- */
+.inventory-panel {
+  position: absolute;
+  bottom: 1rem;
+  right: 1rem;
+  width: 200px;
+  background-color: rgba(10, 10, 10, 0.8);
+  border: 1px solid #555;
+  border-radius: 4px;
+  padding: 1rem;
+  z-index: 10;
+}
+.inventory-panel h4 {
+  border-bottom: 1px solid #555;
+  padding-bottom: 0.5rem;
+  margin-bottom: 0.5rem;
+  text-align: center;
+  font-size: 1.1rem;
+}
+.inventory-panel ul {
+  list-style: none;
+  padding: 0;
+}
+.inventory-item {
+  padding: 0.25rem 0;
+  text-transform: capitalize;
+}
+.inventory-empty {
+  color: #888;
+  font-size: 0.9rem;
+  text-align: center;
+}
+/* ---------- MODAL STİLLERİ (globals.css en sonuna eklenecek) ---------- */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background-color: rgba(0, 0, 0, 0.75);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+  animation: fadeIn 0.3s ease-in-out;
+}
+
+.modal-content {
+  background-color: #0a0a0a;
+  border: 1px solid white;
+  padding: 2rem;
+  border-radius: 4px;
+  width: 90%;
+  /* YENİ: Maksimum genişliği artırdık */
+  max-width: 900px; 
+  color: white;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.modal-content h2 {
+  font-size: 2rem;
+  text-align: center;
+}
+
+.mode-selection {
+  display: grid; /* YENİ: Grid layout'a geçtik */
+  grid-template-columns: 1fr; /* Mobilde tek sütun */
+  gap: 1rem;
+  width: 100%;
+}
+
+/* Orta boy ekranlarda 2x2 grid */
+@media (min-width: 768px) {
+  .mode-selection {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+/* Geniş ekranlarda 4'ü yan yana */
+@media (min-width: 1024px) {
+  .mode-selection {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}
+
+.mode-button {
+  background-color: transparent;
+  border: 1px solid #555;
+  color: #ccc;
+  padding: 1rem;
+  border-radius: 2px;
+  cursor: pointer;
+  text-align: left;
+  transition: all 0.2s;
+  display: flex; /* İçeriği dikeyde hizalamak için */
+  flex-direction: column;
+  height: 100%;
+}
+
+.mode-button:hover {
+  background-color: #222;
+  border-color: #fff;
+}
+
+.mode-button.active {
+  background-color: #333;
+  border-color: #fff;
+  color: #fff;
+}
+
+.mode-button h3 {
+  font-size: 1.25rem;
+  margin-bottom: 0.5rem;
+}
+.mode-button p {
+    font-size: 0.9rem;
+    flex-grow: 1; /* Açıklamaların aynı hizada bitmesini sağlar */
+}
+
+
+.custom-prompt-area textarea {
+  width: 100%;
+  background-color: transparent;
+  border: 1px solid #555;
+  color: white;
+  padding: 0.75rem;
+  font-size: 1rem;
+  border-radius: 2px;
+}
+.custom-prompt-area textarea:focus {
+  outline: none;
+  border-color: white;
+}
+
+.modal-actions {
+  display: flex;
+  gap: 1rem;
+  justify-content: center;
+  margin-top: 1rem;
+}
+
+.close-button {
+  background: none;
+  border: 1px solid #555;
+  color: #ccc;
+  padding: 0.75rem 1.5rem;
+  border-radius: 2px;
+  cursor: pointer;
+  font-size: 1rem;
+}
+.close-button:hover {
+  background-color: #222;
+}
+
+/* Zorluk seçimi stilleri */
+.modal-content label {
+  color: #888;
+  text-transform: uppercase;
+  font-size: 0.8rem;
+  margin-top: 1rem;
+}
+.difficulty-selection {
+  display: flex;
+  gap: 1rem;
+}
+.difficulty-button {
+  flex: 1;
+  background-color: transparent;
+  border: 1px solid #555;
+  color: #ccc;
+  padding: 0.75rem;
+  border-radius: 2px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.difficulty-button:hover {
+  background-color: #222;
+  border-color: #fff;
+}
+.difficulty-button.active {
+  background-color: #333;
+  border-color: #fff;
+  color: #fff;
+}
+/* ---------- KARAKTER PANELİ STİLLERİ ---------- */
+.characters-panel {
+  position: absolute;
+  top: 5rem; /* Not defteri butonunun altına */
+  right: 1rem;
+  width: 200px;
+  background-color: rgba(10, 10, 10, 0.8);
+  border: 1px solid #555;
+  border-radius: 4px;
+  padding: 1rem;
+  z-index: 10;
+}
+.characters-panel h4 {
+  border-bottom: 1px solid #555;
+  padding-bottom: 0.5rem;
+  margin-bottom: 0.5rem;
+  text-align: center;
+  font-size: 1.1rem;
+}
+.characters-panel ul {
+  list-style: none;
+  padding: 0;
+}
+
+.character-item {
+  position: relative;
+  padding: 0.25rem 0;
+  text-transform: capitalize;
+  cursor: default;
+  border-bottom: 1px solid #333;
+}
+
+.character-item:last-child {
+  border-bottom: none;
+}
+
+.character-tooltip {
+  display: none; /* Normalde gizli */
+  position: absolute;
+  bottom: 100%; /* Öğenin üzerinde çıkar */
+  right: 0;
+  width: 250px;
+  background-color: #000;
+  border: 1px solid #777;
+  padding: 0.75rem;
+  border-radius: 4px;
+  z-index: 20;
+  margin-bottom: 0.5rem;
+  font-size: 0.9rem;
+}
+
+.character-item:hover .character-tooltip {
+  display: block; /* Üzerine gelince görünür yap */
+}
+
+.character-tooltip p {
+  margin-bottom: 0.5rem;
+}
+.character-tooltip p:last-child {
+  margin-bottom: 0;
+}

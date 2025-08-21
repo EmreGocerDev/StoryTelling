@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 
-type GameMode = 'classic' | 'detective' | 'custom';
+type GameMode = 'classic' | 'detective' | 'custom' | 'prison_escape';
 type Difficulty = 'easy' | 'normal' | 'hard';
 
 interface Props {
@@ -11,7 +11,7 @@ interface Props {
 }
 
 const GameModeSelectionModal: React.FC<Props> = ({ onStartStory, onClose }) => {
-  const [selectedMode, setSelectedMode] = useState<GameMode>('detective');
+  const [selectedMode, setSelectedMode] = useState<GameMode>('prison_escape');
   const [selectedDifficulty, setSelectedDifficulty] = useState<Difficulty>('normal');
   const [customPrompt, setCustomPrompt] = useState('');
 
@@ -30,6 +30,14 @@ const GameModeSelectionModal: React.FC<Props> = ({ onStartStory, onClose }) => {
         
         <label>Oyun Modu Seçin:</label>
         <div className="mode-selection">
+          <button className={`mode-button ${selectedMode === 'classic' ? 'active' : ''}`} onClick={() => setSelectedMode('classic')}>
+            <h3>Classic Mod</h3>
+            <p>Yapay zekanın tamamen özgün bir macera yaratmasına izin ver.</p>
+          </button>
+          <button className={`mode-button ${selectedMode === 'prison_escape' ? 'active' : ''}`} onClick={() => setSelectedMode('prison_escape')}>
+            <h3>Hapishaneden Kaçış</h3>
+            <p>Bir hücrede uyan, etrafı araştır, eşyaları topla ve kaç!</p>
+          </button>
           <button className={`mode-button ${selectedMode === 'detective' ? 'active' : ''}`} onClick={() => setSelectedMode('detective')}>
             <h3>Dedektif Modu</h3>
             <p>Bir cinayeti araştır, ipuçlarını topla ve katili bul.</p>
