@@ -1,61 +1,226 @@
-/* src/app/globals.css */
-
-/* Elle Renk Tanımlaması */
-body {
-  background-color: #000000 !important;
-  color: #FFFFFF !important;
+/* Temel Sıfırlama */
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
 }
 
-/* Başlık */
-h1 {
-  text-shadow: 0 0 8px rgba(255, 255, 255, 0.3);
+/* ---------- TEMEL SAYFA AYARLARI ---------- */
+html, body {
+  background-color: #000000;
+  color: #FFFFFF;
+  overflow: hidden;
+  height: 100vh;
+  width: 100vw;
+}
+:root { --font-vt323: "VT323", monospace; }
+body { font-family: var(--font-vt323); font-size: 16px; }
+button { font-family: inherit; }
+
+/* ---------- ANA SAYFA DÜZENİ (LAYOUT) ---------- */
+.layout-wrapper { display: flex; height: 100%; position: relative; }
+.main-layout { flex-grow: 1; display: flex; flex-direction: column; height: 100%; padding: 1rem; min-width: 0; /* flex-shrink için önemli */}
+.header { display: flex; justify-content: center; align-items: center; width: 100%; flex-shrink: 0; position: relative; }
+.title { font-size: 3rem; text-align: center; letter-spacing: 0.1em; margin: 0; }
+.main-content { flex-grow: 1; display: flex; justify-content: center; align-items: center; overflow: hidden; margin-top: 1rem; min-height: 0; }
+.game-wrapper { width: 100%; max-width: 896px; display: flex; flex-direction: column; height: 100%; }
+
+/* ---------- OYUN EKRANI STİLLERİ ---------- */
+.story-box { flex-grow: 1; border: 1px solid white; padding: 1rem; overflow-y: auto; margin-bottom: 1.5rem; border-radius: 2px; }
+.story-text { margin-bottom: 1.5rem; white-space: pre-wrap; }
+.user-text { color: #ccc; }
+.input-prompt { display: flex; align-items: center; flex-shrink: 0; }
+.story-input { width: 100%; background: transparent; font-size: 1.125rem; font-family: inherit; padding: 0.5rem; border: none; color: white; }
+.story-input:focus { outline: none; }
+.story-input::placeholder { color: #6b7280; }
+
+/* ---------- SIDEBAR (YAN MENÜ) STİLLERİ - DÜZELTİLMİŞ ---------- */
+.sidebar {
+  width: 280px;
+  height: 100%;
+  flex-shrink: 0;
+  background-color: #0a0a0a;
+  border-right: 1px solid #333;
+  transition: transform 0.3s ease-in-out;
 }
 
-/* Hikaye Kutusu */
-.story-box {
-  border: 1px solid white;
+.sidebar-content-wrapper {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
   padding: 1rem;
-  overflow-y: auto;
-  height: 60vh;
 }
 
-/* Kullanıcının yazdığı metin (> ile başlayan) */
-.user-text {
-  color: #cccccc;
+.sidebar-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #333; padding-bottom: 1rem; margin-bottom: 1rem; flex-shrink: 0; }
+.sidebar-title { font-size: 1.25rem; }
+.story-list { list-style: none; padding: 0; margin: 0; overflow-y: auto; flex-grow: 1; min-height: 0; }
+.story-item { display: flex; justify-content: space-between; align-items: center; padding: 0.75rem 0.5rem; border-bottom: 1px solid #222; border-radius: 2px; }
+.story-item.active { background-color: #333; }
+.story-title { cursor: pointer; flex-grow: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.story-title:hover { text-decoration: underline; }
+.sidebar-footer { margin-top: auto; padding-top: 1rem; border-top: 1px solid #333; flex-shrink: 0; }
+.sidebar-user-email { font-size: 0.875rem; color: #888; text-align: center; margin-bottom: 1rem; word-break: break-all; }
+.story-limit-warning { font-size: 0.8rem; color: #ffcc00; margin-top: 1rem; text-align: center; }
+
+/* ---------- BUTON STİLLERİ ---------- */
+.white-button {
+  background-color: white; color: black; border: 1px solid white; padding: 0.75rem; cursor: pointer; border-radius: 2px; width: 100%; font-size: 1rem; transition: background-color 0.2s;
+}
+.white-button:hover:not(:disabled) { background-color: #ccc; }
+.white-button:disabled { background-color: #333; color: #777; border-color: #555; cursor: not-allowed; }
+.new-story-button { font-size: 1rem; padding: 0.5rem 1rem; width: auto; }
+.logout-button { font-size: 1rem; }
+.delete-button { background: none; border: none; color: #ff4d4d; cursor: pointer; font-size: 0.8rem; padding-left: 1rem; }
+
+/* ---------- MOBİL UYUMLULUK ---------- */
+.hamburger-button, .sidebar-overlay { display: none; }
+@media (max-width: 1024px) {
+    /* Geniş ekran olmayan tablet ve telefonlarda paneli gizle */
+    .kick-chat-panel, .kick-toggle-button {
+        display: none;
+    }
 }
 
-/* Yazı yazma alanı */
-.input-prompt {
+@media (max-width: 768px) {
+  .sidebar {
+    width: 280px;
+    position: fixed;
+    z-index: 1000;
+    transform: translateX(-100%);
+    border-right: none;
+  }
+  .sidebar.open {
+    transform: translateX(0);
+  }
+  .hamburger-button {
+    display: block;
+    position: fixed;
+    top: 1rem;
+    left: 1rem;
+    z-index: 1001;
+    background-color: #111;
+    border: 1px solid white;
+    color: white;
+    padding: 0.5rem;
+    border-radius: 4px;
+  }
+  .sidebar-overlay {
+    display: block;
+    position: fixed;
+    inset: 0;
+    background-color: rgba(0, 0, 0, 0.6);
+    z-index: 999;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.3s ease-in-out;
+  }
+  .sidebar-overlay.open {
+    opacity: 1;
+    pointer-events: auto;
+  }
+  .title { font-size: 1.75rem; }
+}
+
+/* ---------- ANİMASYONLAR ---------- */
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+.fade-in { animation: fadeIn 0.5s ease-in-out; }
+@keyframes slideInFromRight {
+  from { transform: translateX(100%); }
+  to { transform: translateX(0); }
+}
+
+/* ---------- YENİ KICK CHAT STİLLERİ ---------- */
+.kick-toggle-button {
+  padding: 0.5rem 1rem;
+  font-size: 0.9rem;
+  width: auto;
+  margin-right: 1rem;
+}
+
+.kick-chat-panel {
+  width: 340px;
+  height: 100%;
+  flex-shrink: 0;
+  background-color: #0a0a0a;
+  border-left: 1px solid #333;
+  display: flex;
+  flex-direction: column;
+  padding: 1rem;
+  animation: slideInFromRight 0.3s ease-in-out;
+}
+
+.kick-chat-header {
+  border-bottom: 1px solid #333;
+  padding-bottom: 0.5rem;
+  margin-bottom: 1rem;
+  text-align: center;
+}
+
+.kick-chat-controls form {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.kick-channel-input {
+  flex-grow: 1;
+  background: transparent;
+  border: 1px solid #555;
+  color: white;
+  padding: 0.5rem;
+  border-radius: 2px;
+  font-family: inherit;
+  font-size: 0.9rem;
+}
+.kick-channel-input:focus {
+  outline: none;
+  border-color: white;
+}
+
+.kick-set-button {
+  padding: 0.5rem;
+  width: auto;
+  font-size: 0.9rem;
+}
+
+.kick-clear-button {
+  width: 100%;
+  background: #552222;
+  border: 1px solid #883333;
+  color: #ffaaaa;
+  font-family: inherit;
+  font-size: 0.8rem;
+  padding: 0.25rem;
+  border-radius: 2px;
+  cursor: pointer;
+}
+.kick-clear-button:hover {
+  background: #663333;
+}
+
+.kick-no-channel {
+  flex-grow: 1;
   display: flex;
   align-items: center;
-  width: 100%;
+  justify-content: center;
+  color: #888;
+  text-align: center;
+  padding: 1rem;
 }
 
-.story-input {
-  width: 100%;
-  background-color: transparent;
-  /* YENİ: Boyutu paragraf ile aynı (1.125rem) yapıldı */
-  font-size: 1.125rem; 
-  /* YENİ: Fontu sayfanın geri kalanından miras alması sağlandı */
-  font-family: inherit; 
-  padding: 0.5rem;
-  border: none;
-  color: white;
+.kick-iframe-wrapper {
+  flex-grow: 1;
+  overflow: hidden;
+  position: relative;
+  margin-top: 1rem;
+  border: 1px solid #333;
+  border-radius: 2px;
 }
 
-.story-input:focus {
-  outline: none;
-}
-
-.story-input::placeholder {
-  color: #6b7280;
-}
-
-/* Animasyonlar */
-@keyframes fadeIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
-}
-.fade-in {
-  animation: fadeIn 0.5s ease-in-out;
+.kick-iframe-wrapper iframe {
+  position: absolute;
+  top: 0;
+  left: -20px; /* Videoyu sola kaydırarak gizler */
+  height: 100%;
+  width: calc(100% + 20px); /* Genişliği artırarak videonun tamamen gizlendiğinden emin oluruz */
 }
