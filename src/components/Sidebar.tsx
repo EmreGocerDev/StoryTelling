@@ -2,7 +2,6 @@
 
 import type { Session } from '@supabase/auth-helpers-nextjs';
 
-// Gerekli tipleri tanımlıyoruz
 interface Message {
   role: 'user' | 'assistant';
   content: string;
@@ -14,9 +13,9 @@ interface Story {
   history: Message[] | null;
   user_id: string;
   title?: string;
+  game_mode?: string; // game_mode eklendi
 }
 
-// Component'in alacağı props'ları tanımlıyoruz
 interface SidebarProps {
   stories: Story[];
   session: Session | null;
@@ -41,13 +40,12 @@ const Sidebar: React.FC<SidebarProps> = ({
   const storiesReachedLimit = stories.length >= storyLimit;
 
   return (
-    // DÜZELTME: Tüm içerik bu wrapper div'in içinde
     <div className="sidebar-content-wrapper">
       <div className="sidebar-header">
         <h2 className="sidebar-title">Hikayelerim</h2>
         <button
           className="new-story-button white-button"
-          onClick={onNewStory}
+          onClick={onNewStory} // Artık sadece onNewStory'yi çağırıyor
           disabled={storiesReachedLimit}
           title={storiesReachedLimit ? `Maksimum ${storyLimit} hikayeye ulaştınız.` : 'Yeni bir maceraya başla'}
         >
@@ -67,6 +65,9 @@ const Sidebar: React.FC<SidebarProps> = ({
             >
               {story.title || 'İsimsiz Macera'}
             </span>
+            {/* YENİ: Oyun modu etiketi */}
+            <span className="story-mode-badge">{story.game_mode || 'classic'}</span>
+
             <button
               className="delete-button"
               onClick={() => onDeleteStory(story.id)}

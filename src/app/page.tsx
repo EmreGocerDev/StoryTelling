@@ -6,11 +6,12 @@ import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
 import { useRouter } from 'next/navigation';
 import type { Session, User } from '@supabase/auth-helpers-nextjs';
 import Sidebar from '@/components/Sidebar';
-import KickChat from '@/components/KickChat'; // KickChat component'ini import et
+import GameModeSelectionModal from '@/components/GameModeSelectionModal';
+import NoteModal from '@/components/NoteModal';
 
 // Interface ve Sabitler
 interface Message { role: 'user' | 'assistant'; content: string; }
-interface Story { id: number; created_at: string; history: Message[] | null; user_id: string; title?: string; }
+interface Story { id: number; created_at: string; history: Message[] | null; user_id: string; title?: string; game_mode?: string; custom_prompt?: string; notes?: string; difficulty?: string; }
 const TYPE_SPEED = 20;
 const STORY_LIMIT = 10;
 
@@ -28,77 +29,104 @@ export default function Home() {
   const [isTyping, setIsTyping] = useState(false);
   const storyContainerRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
-  const isCreatingStoryRef = useRef(false);
 
-  // YENİ STATE: Kick panelinin görünürlüğünü kontrol eder
-  const [isKickChatVisible, setIsKickChatVisible] = useState(false);
-
+  const [isGameModeModalOpen, setIsGameModeModalOpen] = useState(false);
+  const [isNoteModalOpen, setIsNoteModalOpen] = useState(false);
+  const [currentNotes, setCurrentNotes] = useState("");
+  
+  const fetchStories = useCallback(async (user: User) => {
+    const { data } = await supabase.from('games').select('*').eq('user_id', user.id).order('created_at', { ascending: false });
+    if (data) setStories(data as Story[]);
+  }, [supabase]);
+  
   useEffect(() => {
-    const getSessionAndStories = async (user: User) => {
-      const { data } = await supabase.from('games').select('*').eq('user_id', user.id).order('created_at', { ascending: false });
-      if (data) setStories(data as Story[]);
-    };
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_, session) => {
-      if (!session) { router.push('/login'); }
-      else { setSession(session); getSessionAndStories(session.user); }
+      if (!session) router.push('/login');
+      else { setSession(session); fetchStories(session.user); }
     });
     return () => subscription.unsubscribe();
-  }, [supabase, router]);
+  }, [supabase, router, fetchStories]);
 
   useEffect(() => {
     if (!activeStory) { setHistory([]); return; }
+    
     const currentHistory = (activeStory.history as Message[]) || [];
     setHistory(currentHistory);
+    setCurrentNotes(activeStory.notes || "");
     setIsTyping(false);
-
+    
     if (currentHistory.length === 0) {
       setIsLoading(true);
-      fetch('/api/story', { method: 'POST', body: JSON.stringify({ history: [] }), headers: { 'Content-Type': 'application/json' } })
-        .then(res => res.json())
-        .then(async (storyData) => {
-          if (!storyData.message) return;
-          const initialHistory: Message[] = [{ role: 'assistant', content: storyData.message }];
-          const titleResponse = await fetch('/api/generate-title', { method: 'POST', body: JSON.stringify({ storyText: storyData.message }), headers: { 'Content-Type': 'application/json' } });
-          const { title } = await titleResponse.json();
-          const finalTitle = title || "İsimsiz Macera";
-          const { data: updatedStory } = await supabase.from('games').update({ history: initialHistory, title: finalTitle }).eq('id', activeStory.id).select().single();
-          if (updatedStory) {
-            const finalUpdatedStory = updatedStory as Story;
-            setStories(current => current.map(s => s.id === activeStory.id ? finalUpdatedStory : s));
-            setActiveStory(finalUpdatedStory);
-            setHistory(initialHistory);
-            setIsTyping(true);
-          }
-        })
-        .finally(() => setIsLoading(false));
+      fetch('/api/story', { 
+        method: 'POST', 
+        body: JSON.stringify({ history: [], game_mode: activeStory.game_mode, difficulty: activeStory.difficulty, custom_prompt: activeStory.custom_prompt }), 
+        headers: { 'Content-Type': 'application/json' } 
+      })
+      .then(res => res.json())
+      .then(async (storyData) => {
+        if (!storyData.message) return;
+        const initialHistory: Message[] = [{ role: 'assistant', content: storyData.message }];
+        
+        const titleResponse = await fetch('/api/generate-title', { method: 'POST', body: JSON.stringify({ storyText: storyData.message }), headers: { 'Content-Type': 'application/json' }});
+        const { title } = await titleResponse.json();
+        const finalTitle = title || "İsimsiz Macera";
+        
+        const { data: updatedStory } = await supabase.from('games').update({ history: initialHistory, title: finalTitle }).eq('id', activeStory.id).select().single();
+        if (updatedStory) {
+          const finalUpdatedStory = updatedStory as Story;
+          setStories(current => current.map(s => s.id === activeStory.id ? finalUpdatedStory : s));
+          setActiveStory(finalUpdatedStory);
+          setHistory(initialHistory);
+          setIsTyping(true);
+        }
+      })
+      .finally(() => setIsLoading(false));
     }
   }, [activeStory, supabase]);
+  
+  const handleStartStory = useCallback(async (mode: string, difficulty: string, prompt?: string) => {
+    if (!session?.user || stories.length >= STORY_LIMIT) return;
+    setIsGameModeModalOpen(false);
+    setIsLoading(true);
 
-  const handleNewStory = useCallback(async () => {
-    if (!session?.user || stories.length >= STORY_LIMIT || isCreatingStoryRef.current) return;
-    isCreatingStoryRef.current = true;
-    setIsSidebarOpen(false);
-    const { data: newStoryData } = await supabase.from('games').insert({ user_id: session.user.id, title: "Yeni Macera Yükleniyor..." }).select().single();
+    const { data: newStoryData } = await supabase
+      .from('games')
+      .insert({ user_id: session.user.id, title: "Yeni Macera...", game_mode: mode, difficulty: difficulty, custom_prompt: prompt })
+      .select().single();
+
     if (newStoryData) {
       setStories(current => [newStoryData as Story, ...current]);
       setActiveStory(newStoryData as Story);
     }
-    isCreatingStoryRef.current = false;
   }, [session, stories, supabase]);
+
+  const handleSaveNotes = async (newNotes: string) => {
+    if (!activeStory) return;
+    
+    const { data, error } = await supabase.from('games').update({ notes: newNotes }).eq('id', activeStory.id).select().single();
+    if (error) { console.error('Notları kaydederken hata:', error); return; }
+
+    if (data) {
+        const updatedStory = data as Story;
+        setActiveStory(updatedStory);
+        setStories(currentStories => currentStories.map(s => s.id === updatedStory.id ? updatedStory : s));
+    }
+    setIsNoteModalOpen(false);
+  };
 
   const handleSelectStory = useCallback((storyId: number) => {
     const selectedStory = stories.find(s => s.id === storyId);
     if (selectedStory) setActiveStory(selectedStory);
     setIsSidebarOpen(false);
   }, [stories]);
-
+  
   const handleDeleteStory = async (storyId: number) => {
     if (!window.confirm("Bu hikayeyi silmek istediğinizden emin misiniz?")) return;
     await supabase.from('games').delete().eq('id', storyId);
     setStories(stories.filter(s => s.id !== storyId));
     if (activeStory?.id === storyId) setActiveStory(null);
   };
-
+  
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     if (!userInput.trim() || isLoading || isTyping || !activeStory) return;
@@ -106,9 +134,15 @@ export default function Home() {
     setHistory(newHistoryWithUser);
     setUserInput('');
     setIsLoading(true);
+    
     try {
-      const response = await fetch('/api/story', { method: 'POST', body: JSON.stringify({ history: newHistoryWithUser, gameId: activeStory.id }), headers: { 'Content-Type': 'application/json' } });
+      const response = await fetch('/api/story', { 
+        method: 'POST', 
+        body: JSON.stringify({ history: newHistoryWithUser, game_mode: activeStory.game_mode, difficulty: activeStory.difficulty, custom_prompt: activeStory.custom_prompt }), 
+        headers: { 'Content-Type': 'application/json' }
+      });
       const data = await response.json();
+      
       if (data.message) {
         const finalHistory: Message[] = [...newHistoryWithUser, { role: 'assistant', content: data.message }];
         await supabase.from('games').update({ history: finalHistory }).eq('id', activeStory.id);
@@ -124,7 +158,7 @@ export default function Home() {
       setIsLoading(false);
     }
   };
-
+  
   const handleLogout = async () => {
     await supabase.auth.signOut();
     router.push('/login');
@@ -134,79 +168,75 @@ export default function Home() {
     storyContainerRef.current?.scrollTo(0, storyContainerRef.current.scrollHeight);
     if (!isLoading && !isTyping) inputRef.current?.focus();
   }, [history, isLoading, isTyping]);
-
-  if (!session) {
-    return <div>Yönlendiriliyor...</div>;
-  }
+  
+  if (!session) return <div>Yönlendiriliyor...</div>;
 
   return (
-    <div className="layout-wrapper">
-      <div className={`sidebar-overlay ${isSidebarOpen ? 'open' : ''}`} onClick={() => setIsSidebarOpen(false)}></div>
-      <button className="hamburger-button" onClick={() => setIsSidebarOpen(!isSidebarOpen)}>☰</button>
-      <div className={`sidebar ${isSidebarOpen ? 'open' : ''}`}>
-        <Sidebar stories={stories} onNewStory={handleNewStory} onSelectStory={handleSelectStory} onDeleteStory={handleDeleteStory} onLogout={handleLogout} storyLimit={STORY_LIMIT} activeStoryId={activeStory?.id ?? null} session={session} />
-      </div>
+    <>
+      {isGameModeModalOpen && <GameModeSelectionModal onStartStory={handleStartStory} onClose={() => setIsGameModeModalOpen(false)} />}
+      {isNoteModalOpen && <NoteModal initialNotes={currentNotes} onSave={handleSaveNotes} onClose={() => setIsNoteModalOpen(false)} />}
 
-      <div className="main-layout">
-        <header className="header">
-            <div style={{ flex: 1 }}></div>
+      <div className="layout-wrapper">
+        <div className={`sidebar-overlay ${isSidebarOpen ? 'open' : ''}`} onClick={() => setIsSidebarOpen(false)}></div>
+        <button className="hamburger-button" onClick={() => setIsSidebarOpen(!isSidebarOpen)}>☰</button>
+        <div className={`sidebar ${isSidebarOpen ? 'open' : ''}`}>
+          <Sidebar stories={stories} onNewStory={() => setIsGameModeModalOpen(true)} onSelectStory={handleSelectStory} onDeleteStory={handleDeleteStory} onLogout={handleLogout} storyLimit={STORY_LIMIT} activeStoryId={activeStory?.id ?? null} session={session} />
+        </div>
+
+        <div className="main-layout">
+          <header className="header">
+            <div style={{flex: 1}}></div>
             <h1 className="title">STORYTELLING</h1>
-            <div style={{ flex: 1, display: 'flex', justifyContent: 'flex-end' }}>
-                <button
-                    className="white-button kick-toggle-button"
-                    onClick={() => setIsKickChatVisible(!isKickChatVisible)}
-                >
-                    Kick Chat
-                </button>
+            <div style={{flex: 1}}></div>
+          </header>
+          <main className="main-content">
+            {activeStory && <button className="notes-button" onClick={() => setIsNoteModalOpen(true)}>Not Defteri</button>}
+            <div className="game-wrapper">
+              <div ref={storyContainerRef} className="story-box">
+                {isLoading && history.length === 0 && <p style={{textAlign: 'center'}}>Yeni macera oluşturuluyor...</p>}
+                {!activeStory && !isLoading && <div><p>Başlamak için yeni bir hikaye oluşturun veya birini seçin.</p></div>}
+                
+                {history.map((msg, index) => {
+                  const isLastMessage = index === history.length - 1;
+                  return (
+                    <div key={`${index}-${msg.content?.slice(0, 10)}`} className="fade-in" style={{ marginBottom: '1.5rem' }}>
+                      {msg.role === 'assistant' && isLastMessage && isTyping ? (
+                        <p className="story-text">
+                          <Typewriter
+                            words={[msg.content]}
+                            loop={1}
+                            cursor
+                            cursorStyle='_'
+                            typeSpeed={TYPE_SPEED}
+                            onLoopDone={() => setIsTyping(false)}
+                          />
+                        </p>
+                      ) : (
+                        <p className={`story-text ${msg.role === 'user' ? 'user-text' : ''}`}>
+                          {msg.role === 'user' ? `> ${msg.content}` : msg.content}
+                        </p>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+              <form onSubmit={handleSubmit} className="input-prompt">
+                <span>&gt;</span>
+                <input
+                  ref={inputRef}
+                  type="text"
+                  value={userInput}
+                  onChange={(e) => setUserInput(e.target.value)}
+                  className="story-input"
+                  placeholder={!activeStory ? "Önce bir hikaye seç..." : (isLoading || isTyping ? "..." : "Ne yapıyorsun?")}
+                  disabled={!activeStory || isLoading || isTyping}
+                  autoFocus
+                />
+              </form>
             </div>
-        </header>
-        <main className="main-content">
-          <div className="game-wrapper">
-            <div ref={storyContainerRef} className="story-box">
-              {!activeStory && <div><p>Başlamak için yeni bir hikaye oluşturun veya birini seçin.</p></div>}
-              {history.map((msg, index) => {
-                const isLastMessage = index === history.length - 1;
-                return (
-                  <div key={`${index}-${msg.content?.slice(0, 10)}`} className="fade-in" style={{ marginBottom: '1.5rem' }}>
-                    {msg.role === 'assistant' && isLastMessage && isTyping ? (
-                      <p className="story-text">
-                        <Typewriter
-                          words={[msg.content]}
-                          loop={1}
-                          cursor
-                          cursorStyle='_'
-                          typeSpeed={TYPE_SPEED}
-                          onLoopDone={() => setIsTyping(false)}
-                        />
-                      </p>
-                    ) : (
-                      <p className={`story-text ${msg.role === 'user' ? 'user-text' : ''}`}>
-                        {msg.role === 'user' ? `> ${msg.content}` : msg.content}
-                      </p>
-                    )}
-                  </div>
-                );
-              })}
-              {isLoading && <p style={{ textAlign: 'center' }}>...</p>}
-            </div>
-            <form onSubmit={handleSubmit} className="input-prompt">
-              <span>&gt;</span>
-              <input
-                ref={inputRef}
-                type="text"
-                value={userInput}
-                onChange={(e) => setUserInput(e.target.value)}
-                className="story-input"
-                placeholder={!activeStory ? "Önce bir hikaye seçin..." : (isLoading || isTyping ? "Hala anlatıyorum..." : "Hikayeye yön ver...")}
-                disabled={!activeStory || isLoading || isTyping}
-                autoFocus
-              />
-            </form>
-          </div>
-        </main>
+          </main>
+        </div>
       </div>
-
-      {isKickChatVisible && <KickChat />}
-    </div>
+    </>
   );
 }
