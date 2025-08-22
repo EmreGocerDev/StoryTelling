@@ -16,14 +16,18 @@ interface OnlineUser {
   user_id: string;
   username: string;
 }
+
+// ================== DÜZELTME BAŞLANGIÇ ==================
+// 'any' kullanımını kaldırarak tipi daha net hale getiriyoruz
 interface SupabasePresence {
   key: string;
   username: string;
-  [key: string]: any;
 }
 interface PresenceState {
   [key: string]: SupabasePresence[];
 }
+// ================== DÜZELTME BİTİŞ ==================
+
 interface Props {
   session: Session | null;
   onClose: () => void;
@@ -44,13 +48,13 @@ const GlobalChat: React.FC<Props> = ({ session, onClose, onStartPrivateChat }) =
   useEffect(() => {
     if (!session) return;
 
-    // 1. Başlangıçta son 50 mesajı çek
     const fetchInitialMessages = async () => {
       const { data, error } = await supabase
         .from('chat_messages')
         .select('*, profiles(username)')
         .order('created_at', { ascending: false })
         .limit(50);
+
       if (error) {
         console.error("Mesaj geçmişi çekilirken hata:", error);
         return;
@@ -67,7 +71,6 @@ const GlobalChat: React.FC<Props> = ({ session, onClose, onStartPrivateChat }) =
       },
     });
 
-    // 2. Yeni mesajları dinle
     channel.on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'chat_messages' }, 
       async (payload) => {
         const newMessage = payload.new as ChatMessage;
@@ -76,10 +79,8 @@ const GlobalChat: React.FC<Props> = ({ session, onClose, onStartPrivateChat }) =
       }
     );
 
-    // 3. Çevrimiçi kullanıcıları dinle ve listeyi güncelle
     channel.on('presence', { event: 'sync' }, () => {
       const presenceState: PresenceState = channel.presenceState();
-      console.log("DEBUG: Ham Presence State:", presenceState); // Hata ayıklama için
       
       const users = Object.keys(presenceState).map(presenceId => {
         const pres = presenceState[presenceId][0] as SupabasePresence;
@@ -88,27 +89,19 @@ const GlobalChat: React.FC<Props> = ({ session, onClose, onStartPrivateChat }) =
       .filter((user, index, self) => 
         user.user_id && user.username && index === self.findIndex((u) => u.user_id === user.user_id)
       );
-      
-      console.log("DEBUG: İşlenmiş Kullanıcı Listesi:", users); // Hata ayıklama için
+
       setOnlineUsers(users);
     });
 
-    // 4. Kanala abone ol ve kendini 'çevrimiçi' olarak bildir
     channel.subscribe(async (status) => {
       if (status === 'SUBSCRIBED') {
-        console.log('DEBUG: Kanala abone olundu.');
         const { data: profile } = await supabase.from('profiles').select('username').eq('id', session.user.id).single();
         const username = profile?.username || session.user.email?.split('@')[0] || `kullanici-${session.user.id.substring(0, 5)}`;
         
         if (!profile || !profile.username) {
-            console.log("DEBUG: Profil bulunamadı, oluşturuluyor...");
-            const { error: upsertError } = await supabase.from('profiles').upsert({ id: session.user.id, username: username });
-            if(upsertError) console.error("DEBUG: Profil oluşturma hatası:", upsertError);
+            await supabase.from('profiles').upsert({ id: session.user.id, username: username });
         }
-        
-        console.log(`DEBUG: Kanala '${username}' olarak katılım bildiriliyor...`);
-        const trackStatus = await channel.track({ username: username });
-        console.log('DEBUG: Track status:', trackStatus);
+        await channel.track({ username: username });
       }
     });
 
