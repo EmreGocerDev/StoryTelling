@@ -1,11 +1,9 @@
 import { NextResponse } from 'next/server';
 import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
 import { cookies } from 'next/headers';
-// import { SupabaseClient } from '@supabase/supabase-js'; // BU SATIR KALDIRILDI
 
-// ... (dosyanın geri kalanı aynı, değişiklik yok)
 // Önemli: Bu dosyanın çalışması için Supabase SQL Editor'de 
-// 'get_conversation_between_users' fonksiyonunu oluşturduğunuzdan emin olun.
+// aşağıdaki fonksiyonu bir kez çalıştırmanız gerekir.
 /*
   create or replace function get_conversation_between_users(
     user1_id uuid,

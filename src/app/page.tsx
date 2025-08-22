@@ -12,8 +12,8 @@ import InventoryPanel from '@/components/InventoryPanel';
 import CharactersPanel from '@/components/CharactersPanel';
 import GlobalChat from '@/components/GlobalChat';
 import PrivateChat from '@/components/PrivateChat';
+import Portal from '@/components/Portal';
 
-// Gerekli tipleri doğrudan bu dosyada tanımlıyoruz
 interface Message { role: 'user' | 'assistant'; content: string; }
 interface NPC { name: string; description: string; state: string; }
 interface Story { id: number; created_at: string; history: Message[] | null; user_id: string; title?: string; game_mode?: string; custom_prompt?: string; notes?: string; difficulty?: string; inventory?: string[] | null; npcs?: NPC[] | null; legend_name?: string; }
@@ -25,9 +25,7 @@ const parseResponseForItems = (message: string): { cleanedMessage: string, newIt
   const itemRegex = /\[ITEM_ACQUIRED:([^\]]+)\]/g;
   const newItems: string[] = [];
   const matches = message.matchAll(itemRegex);
-  for (const match of matches) {
-    newItems.push(match[1].replace(/_/g, ' '));
-  }
+  for (const match of matches) { newItems.push(match[1].replace(/_/g, ' ')); }
   const cleanedMessage = message.replace(itemRegex, "").trim();
   return { cleanedMessage, newItems };
 };
@@ -40,9 +38,7 @@ const parseResponseForCharacters = (message: string): { cleanedMessage: string, 
     try {
       const jsonString = match[1];
       const npcData = JSON.parse(jsonString);
-      if (npcData.name && npcData.description && npcData.state) {
-        updatedNpcs.push(npcData);
-      }
+      if (npcData.name && npcData.description && npcData.state) { updatedNpcs.push(npcData); }
     } catch (e) {
       console.error("Karakter JSON'u parse edilemedi:", match[1], e);
     }
@@ -104,15 +100,7 @@ export default function Home() {
       setIsLoading(true);
       fetch('/api/story', {
         method: 'POST',
-        body: JSON.stringify({ 
-            history: [], 
-            game_mode: activeStory.game_mode, 
-            difficulty: activeStory.difficulty, 
-            custom_prompt: activeStory.custom_prompt, 
-            inventory: activeStory.inventory || [],
-            npcs: activeStory.npcs || [],
-            legend_name: activeStory.legend_name
-        }),
+        body: JSON.stringify({ history: [], game_mode: activeStory.game_mode, difficulty: activeStory.difficulty, custom_prompt: activeStory.custom_prompt, inventory: activeStory.inventory || [], npcs: activeStory.npcs || [], legend_name: activeStory.legend_name }),
         headers: { 'Content-Type': 'application/json' }
       })
       .then(res => res.json())
@@ -147,16 +135,7 @@ export default function Home() {
     if (!session?.user || stories.length >= STORY_LIMIT) return;
     setIsGameModeModalOpen(false);
     setIsLoading(true);
-    const { data: newStoryData } = await supabase.from('games').insert({ 
-        user_id: session.user.id, 
-        title: legendName || "Yeni Macera...", 
-        game_mode: mode, 
-        difficulty: difficulty, 
-        custom_prompt: prompt, 
-        legend_name: legendName,
-        inventory: [], 
-        npcs: [] 
-    }).select().single();
+    const { data: newStoryData } = await supabase.from('games').insert({ user_id: session.user.id, title: legendName || "Yeni Macera...", game_mode: mode, difficulty: difficulty, custom_prompt: prompt, legend_name: legendName, inventory: [], npcs: [] }).select().single();
     if (newStoryData) {
       setStories(current => [newStoryData as Story, ...current]);
       setActiveStory(newStoryData as Story);
@@ -210,18 +189,13 @@ export default function Home() {
         const finalNpcs = [...npcs];
         if (newItems.length > 0) {
           const uniqueNewItems = newItems.filter(item => !finalInventory.includes(item));
-          if(uniqueNewItems.length > 0) {
-            finalInventory.push(...uniqueNewItems);
-          }
+          if(uniqueNewItems.length > 0) { finalInventory.push(...uniqueNewItems); }
         }
         if (updatedNpcs.length > 0) {
             updatedNpcs.forEach(updatedNpc => {
                 const existingNpcIndex = finalNpcs.findIndex(npc => npc.name === updatedNpc.name);
-                if (existingNpcIndex !== -1) {
-                    finalNpcs[existingNpcIndex] = updatedNpc;
-                } else {
-                    finalNpcs.push(updatedNpc);
-                }
+                if (existingNpcIndex !== -1) { finalNpcs[existingNpcIndex] = updatedNpc; } 
+                else { finalNpcs.push(updatedNpc); }
             });
         }
         const finalHistory: Message[] = [...newHistoryWithUser, { role: 'assistant', content: cleanedMessage }];
@@ -252,10 +226,7 @@ export default function Home() {
     if (userId === session?.user.id) return;
     
     for (const user of activePrivateChats.values()) {
-        if (user.id === userId) {
-          console.log("Sohbet zaten açık.");
-          return;
-        }
+        if (user.id === userId) return;
     }
 
     const response = await fetch('/api/conversations', {
@@ -277,6 +248,11 @@ export default function Home() {
     });
   };
 
+  const handleDeleteConversation = async (conversationId: string) => {
+    await fetch(`/api/conversations/${conversationId}`, { method: 'DELETE' });
+    handleClosePrivateChat(conversationId);
+  };
+
   useEffect(() => {
     storyContainerRef.current?.scrollTo(0, storyContainerRef.current.scrollHeight);
     if (!isLoading && !isTyping) inputRef.current?.focus();
@@ -286,18 +262,14 @@ export default function Home() {
 
   return (
     <>
-      {isGameModeModalOpen && <GameModeSelectionModal onStartStory={handleStartStory} onClose={() => setIsGameModeModalOpen(false)} />}
-      {isNoteModalOpen && <NoteModal initialNotes={currentNotes} onSave={handleSaveNotes} onClose={() => setIsNoteModalOpen(false)} />}
-      {isChatOpen && <GlobalChat session={session} onClose={() => setIsChatOpen(false)} onStartPrivateChat={handleStartPrivateChat} />}
-      {Array.from(activePrivateChats.entries()).map(([conversationId, otherUser]) => (
-        <PrivateChat 
-            key={conversationId}
-            session={session}
-            conversationId={conversationId}
-            otherUser={otherUser}
-            onClose={() => handleClosePrivateChat(conversationId)}
-        />
-      ))}
+      <Portal>
+        {isGameModeModalOpen && <GameModeSelectionModal onStartStory={handleStartStory} onClose={() => setIsGameModeModalOpen(false)} />}
+        {isNoteModalOpen && <NoteModal initialNotes={currentNotes} onSave={handleSaveNotes} onClose={() => setIsNoteModalOpen(false)} />}
+        {isChatOpen && <GlobalChat session={session} onClose={() => setIsChatOpen(false)} onStartPrivateChat={handleStartPrivateChat} />}
+        {Array.from(activePrivateChats.entries()).map(([conversationId, otherUser], index) => (
+          <PrivateChat key={conversationId} session={session} conversationId={conversationId} otherUser={otherUser} onClose={() => handleClosePrivateChat(conversationId)} onDelete={() => handleDeleteConversation(conversationId)} defaultPosition={{ x: 300 + (index * 50), y: 50 + (index * 50) }} />
+        ))}
+      </Portal>
       <div className="layout-wrapper">
         <div className={`sidebar-overlay ${isSidebarOpen ? 'open' : ''}`} onClick={() => setIsSidebarOpen(false)}></div>
         <button className="hamburger-button" onClick={() => setIsSidebarOpen(!isSidebarOpen)}>☰</button>
@@ -307,9 +279,7 @@ export default function Home() {
         <div className="main-layout">
           <header className="header">
             <div style={{flex: 1, display: 'flex', justifyContent: 'flex-start'}}>
-                <button className="chat-toggle-button" onClick={() => setIsChatOpen(true)}>
-                    Global Sohbet
-                </button>
+                <button className="chat-toggle-button" onClick={() => setIsChatOpen(true)}>Global Sohbet</button>
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
               <h1 className="title">STORYTELLING</h1>
@@ -332,9 +302,7 @@ export default function Home() {
                   return (
                     <div key={`${index}-${msg.content?.slice(0, 10)}`} className="fade-in" style={{ marginBottom: '1.5rem' }}>
                       {msg.role === 'assistant' && isLastMessage && isTyping ? (
-                        <p className="story-text">
-                          <Typewriter words={[msg.content]} loop={1} cursor cursorStyle='_' typeSpeed={TYPE_SPEED} onLoopDone={() => setIsTyping(false)} />
-                        </p>
+                        <p className="story-text"><Typewriter words={[msg.content]} loop={1} cursor cursorStyle='_' typeSpeed={TYPE_SPEED} onLoopDone={() => setIsTyping(false)} /></p>
                       ) : (
                         <p className={`story-text ${msg.role === 'user' ? 'user-text' : ''}`}>{msg.role === 'user' ? `> ${msg.content}` : msg.content}</p>
                       )}
