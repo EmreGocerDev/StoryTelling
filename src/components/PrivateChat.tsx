@@ -6,11 +6,11 @@ import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
 
 // Tipleri tanımlayalım
 interface ChatMessage {
-    id: string;
-    created_at: string;
-    content: string;
-    sender_id: string;
-    profiles: { username: string } | null;
+  id: string;
+  created_at: string;
+  content: string;
+  user_id: string;
+  profiles: { username: string; chat_color: string } | null;
 }
 
 interface Props {
@@ -19,7 +19,7 @@ interface Props {
   otherUser: { id: string; username: string };
   onClose: () => void;
   onDelete: () => void;
-  className?: string; // className prop'u buraya eklendi
+  className?: string;
 }
 
 const PrivateChat: React.FC<Props> = ({ session, conversationId, otherUser, onClose, onDelete, className }) => {
@@ -36,7 +36,7 @@ const PrivateChat: React.FC<Props> = ({ session, conversationId, otherUser, onCl
     // Başlangıçta özel sohbetin geçmişini çek
     const fetchMessages = async () => {
         const { data } = await supabase.from('private_messages')
-            .select('*, profiles:sender_id(username)')
+            .select('*, profiles:user_id(username, chat_color)')
             .eq('conversation_id', conversationId)
             .order('created_at', { ascending: true });
         if (data) setMessages(data as ChatMessage[]);
@@ -52,8 +52,8 @@ const PrivateChat: React.FC<Props> = ({ session, conversationId, otherUser, onCl
         filter: `conversation_id=eq.${conversationId}`
     }, async (payload) => {
         const newMessage = payload.new as ChatMessage;
-        const { data: profileData } = await supabase.from('profiles').select('username').eq('id', newMessage.sender_id).single();
-        setMessages(prev => [...prev, { ...newMessage, profiles: profileData }]);
+        const { data: profileData } = await supabase.from('profiles').select('username, chat_color').eq('id', newMessage.user_id).single();
+        setMessages(prev => [...prev, { ...newMessage, profiles: profileData as { username: string; chat_color: string } | null }]);
     }).subscribe();
 
     // Component kaldırıldığında kanaldan ayrıl
@@ -71,7 +71,7 @@ const PrivateChat: React.FC<Props> = ({ session, conversationId, otherUser, onCl
     // Mesajı doğrudan Supabase'e kaydediyoruz, RLS kuralları güvenliği sağlıyor
     await supabase.from('private_messages').insert({
         conversation_id: conversationId,
-        sender_id: session.user.id,
+        user_id: session.user.id,
         content: tempInput
     });
   };
@@ -82,9 +82,13 @@ const PrivateChat: React.FC<Props> = ({ session, conversationId, otherUser, onCl
       onDelete();
     }
   };
+  
+  // Mesajın stilini dinamik olarak oluşturan fonksiyon
+  const getMessageStyle = (msg: ChatMessage) => {
+    return { color: msg.profiles?.chat_color || '#FFFFFF' };
+  };
 
   return (
-    // DÜZELTME BURADA: className ana div'e eklendi
     <div className={`private-chat-container ${className || ''}`}>
       <div className="chat-header">
         <h4>{otherUser.username} ile Sohbet</h4>
@@ -95,8 +99,11 @@ const PrivateChat: React.FC<Props> = ({ session, conversationId, otherUser, onCl
       </div>
       <div className="chat-messages-area">
         {messages.map(msg => (
-          <div key={msg.id} className={`chat-message-item ${msg.sender_id === session.user.id ? 'sent' : 'received'}`}>
-            <strong>{msg.profiles?.username || 'Bilinmeyen'}: </strong><span>{msg.content}</span>
+          <div key={msg.id} className={`chat-message-item ${msg.user_id === session.user.id ? 'sent' : 'received'}`}>
+            <strong style={getMessageStyle(msg)}>
+              {msg.profiles?.username || 'Bilinmeyen'}: 
+            </strong>
+            <span>{msg.content}</span>
           </div>
         ))}
         <div ref={messagesEndRef} />

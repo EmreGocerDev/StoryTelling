@@ -14,7 +14,11 @@ html, body {
   width: 100vw;
 }
 :root { --font-vt323: "VT323", monospace; }
-body { font-family: var(--font-vt323); font-size: 16px; }
+body, button, input, textarea { 
+  font-family: var(--font-vt323); 
+  font-size: 16px;
+  font-weight: 400; 
+}
 button, input, textarea { font-family: inherit; }
 
 /* ---------- ANA SAYFA DÜZENİ (LAYOUT) ---------- */
@@ -37,7 +41,7 @@ button, input, textarea { font-family: inherit; }
 .title { font-size: 3rem; text-align: center; letter-spacing: 0.1em; margin: 0; }
 .header .game-mode-subtitle { font-size: 1rem; color: #888; text-transform: capitalize; letter-spacing: 0.1em; margin-top: -0.5rem; text-align: center; height: 1rem; }
 .main-content { flex-grow: 1; display: flex; justify-content: center; align-items: center; overflow: hidden; margin-top: 1rem; min-height: 0; position: relative; }
-.game-wrapper { width: 100%; max-width: 896px; display: flex; flex-direction: column; height: 100%; }
+.game-wrapper { width: 100%; max-width: 896px; display: flex; flex-direction: column; height: 100%; min-width: 0; min-height: 0;}
 
 /* ---------- OYUN EKRANI STİLLERİ ---------- */
 .story-box { flex-grow: 1; border: 1px solid white; padding: 1rem; overflow-y: auto; margin-bottom: 1.5rem; border-radius: 2px; min-height: 0; }
@@ -176,7 +180,7 @@ button, input, textarea { font-family: inherit; }
 /* ---------- GLOBAL SOHBET STİLLERİ ---------- */
 .global-chat-container, .private-chat-container { position: fixed; background-color: #0a0a0a; border: 1px solid #fff; border-radius: 4px; z-index: 1050; display: flex; flex-direction: column; box-shadow: 0 5px 15px rgba(0,0,0,0.5); }
 .global-chat-container { bottom: 1rem; left: 1rem; width: 500px; height: 400px; }
-.private-chat-container { bottom: 1rem; right: 2rem; width: 350px; height: 400px; border-color: #4ade80; }
+.private-chat-container { bottom: 1rem; right: 2rem; width: 350px; height: 400px; border-color: #ccc; }
 .chat-header { cursor: default; display: flex; justify-content: space-between; align-items: center; padding: 0.5rem 1rem; border-bottom: 1px solid #333; flex-shrink: 0; }
 .chat-header h4 { font-size: 1rem; }
 .chat-header-buttons { display: flex; gap: 0.5rem; align-items: center; }
@@ -187,12 +191,11 @@ button, input, textarea { font-family: inherit; }
 .chat-body { flex-grow: 1; display: flex; min-height: 0; }
 .chat-messages-area { flex-grow: 1; padding: 1rem; overflow-y: auto; }
 .chat-message-item { margin-bottom: 0.5rem; line-height: 1.4; word-wrap: break-word; }
-.chat-message-item strong { color: #4ade80; }
+.chat-message-item strong { color: #ccc; }
 .chat-message-item.sent { text-align: right; }
-.chat-message-item.sent strong { color: #facc15; }
+.chat-message-item.sent strong { color: #fff; }
 .chat-online-users-area { width: 120px; flex-shrink: 0; border-left: 1px solid #333; padding: 1rem; overflow-y: auto; font-size: 0.9rem; }
 .chat-online-users-area h5 { margin-bottom: 0.5rem; color: #888; }
-.chat-online-users-area ul { list-style: none; padding: 0; }
 .chat-online-users-area li { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-bottom: 0.25rem; }
 .chat-online-users-area li.other { cursor: pointer; }
 .chat-online-users-area li.other:hover { text-decoration: underline; color: #fff; }
@@ -205,12 +208,99 @@ button, input, textarea { font-family: inherit; }
 .hamburger-button {
   display: none;
 }
+.chat-unread-indicator {
+  color: #ff0000;
+  margin-left: 0.5rem;
+}
+/* ---------- SOHBET AYARLARI ---------- */
+.settings-input-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+  border-top: 1px solid #333;
+}
+.settings-icon {
+  background: none;
+  border: none;
+  color: #fff;
+  cursor: pointer;
+  padding: 0.5rem 0.5rem 0.5rem 1rem;
+  font-size: 1.2rem;
+  transition: color 0.2s;
+}
+.settings-icon:hover {
+  color: #ccc;
+}
+.chat-settings-panel {
+    position: absolute;
+    bottom: 3.5rem;
+    left: 0.5rem;
+    width: 250px;
+    background-color: #111;
+    border: 1px solid #555;
+    border-radius: 4px;
+    padding: 1rem;
+    z-index: 10;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.chat-settings-panel label {
+  color: #aaa;
+  text-transform: none;
+  font-size: 0.9rem;
+  margin-top: 0;
+}
+
+.chat-settings-panel input[type="text"],
+.chat-settings-panel input[type="color"] {
+  background-color: transparent;
+  border: 1px solid #555;
+  color: #fff;
+  padding: 0.5rem;
+  border-radius: 2px;
+}
+
+.chat-settings-panel input:focus {
+  outline: none;
+  border-color: #fff;
+}
+
+/* Mobil uyumluluk için sohbet ayarları */
+@media (max-width: 768px) {
+  .chat-settings-panel {
+    left: 50%;
+    transform: translateX(-50%);
+    bottom: 5rem; /* Giriş kutusunun altına kaydır */
+    width: 90%;
+  }
+  .settings-input-wrapper {
+      position: static;
+      border-top: 1px solid #333;
+  }
+}
+
 /* ---------- MOBİL UYUMLULUK ---------- */
 @media (max-width: 768px) {
   html, body { overflow: hidden; height: 100vh; }
   .layout-wrapper, .main-layout { height: 100%; }
-  .main-content { display: flex; flex-direction: column; flex-grow: 1; min-height: 0; }
-  .game-wrapper { display: flex; flex-direction: column; flex-grow: 1; min-height: 0; order: 1; }
+  .main-content { 
+    display: flex; 
+    flex-direction: column; 
+    flex-grow: 1; 
+    min-height: 0; 
+    order: 1;
+    overflow-y: auto; /* Düzeltme burada: dikey kaydırma çubuğu eklendi */
+  }
+  .game-wrapper { 
+    display: flex; 
+    flex-direction: column; 
+    flex-grow: 1; 
+    min-height: 0; 
+    order: 1;
+    min-width: 0; /* Düzeltme: esnek öğelerin taşmasını önler */
+  }
   .notes-button, .characters-panel, .inventory-panel { position: relative; width: 100%; margin-top: 1rem; right: auto; top: auto; bottom: auto; flex-shrink: 0; }
   .notes-button { order: 2; margin-bottom: 0; }
   .characters-panel { order: 3; }
@@ -225,7 +315,16 @@ button, input, textarea { font-family: inherit; }
   .modal-content h2 { font-size: 1.5rem; }
   .mode-selection.main-modes .mode-button h3, .mode-button h3 { font-size: 1rem; }
   .chat-toggle-button { display: none; }
-  .global-chat-container, .private-chat-container { display: none; }
+  /* Sohbet ekranlarını mobil için tam ekran yapma */
+  .global-chat-container, .private-chat-container {
+    display: flex; /* `display: none` kuralını geçersiz kılar */
+    position: fixed;
+    inset: 0;
+    width: 100vw;
+    height: 100vh;
+    border-radius: 0;
+    border: none;
+  }
 }
 
 /* ---------- ANİMASYONLAR ---------- */

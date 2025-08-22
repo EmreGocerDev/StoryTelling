@@ -75,11 +75,22 @@ export default function Home() {
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [activePrivateChats, setActivePrivateChats] = useState<Map<string, { id: string; username: string }>>(new Map());
   const [closingWindows, setClosingWindows] = useState({
-      globalChat: false,
-      privateChats: new Set<string>(),
-      gameModeModal: false,
-      noteModal: false,
+    globalChat: false,
+    privateChats: new Set<string>(),
+    gameModeModal: false,
+    noteModal: false,
   });
+
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    const checkMobile = () => {
+        setIsMobile(window.innerWidth <= 768);
+    };
+    window.addEventListener('resize', checkMobile);
+    checkMobile();
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
 
   const fetchStories = useCallback(async (user: User) => {
     const { data } = await supabase.from('games').select('*').eq('user_id', user.id).order('created_at', { ascending: false });
@@ -308,11 +319,9 @@ export default function Home() {
 
   const handleDeleteConversation = async (conversationId: string) => {
     const response = await fetch(`/api/conversations/delete`, {
-      method: 'POST', // Metodun POST olduğundan emin oluyoruz
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ conversationId: conversationId }), // ID'yi gövdede gönderiyoruz
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ conversationId: conversationId }),
     });
 
     if (response.ok) {
@@ -392,7 +401,14 @@ export default function Home() {
       <Portal>
         {isGameModeModalOpen && <GameModeSelectionModal onStartStory={handleStartStory} onClose={handleGameModeModalClose} className={closingWindows.gameModeModal ? 'fade-out' : 'fade-in'} />}
         {isNoteModalOpen && <NoteModal initialNotes={currentNotes} onSave={handleSaveNotes} onClose={handleNoteModalClose} className={closingWindows.noteModal ? 'fade-out' : 'fade-in'} />}
-        {isChatOpen && <GlobalChat session={session} onClose={handleChatClose} onStartPrivateChat={handleStartPrivateChat} className={closingWindows.globalChat ? 'fade-out' : 'fade-in'} />}
+        {isChatOpen && (
+          <GlobalChat 
+            session={session} 
+            onClose={handleChatClose} 
+            onStartPrivateChat={handleStartPrivateChat} 
+            className={`${closingWindows.globalChat ? 'fade-out' : 'fade-in'} ${isMobile ? 'full-screen-modal' : ''}`}
+          />
+        )}
         {Array.from(activePrivateChats.entries()).map(([conversationId, otherUser], index) => (
           <PrivateChat 
               key={conversationId}
@@ -401,7 +417,7 @@ export default function Home() {
               otherUser={otherUser}
               onClose={() => handleClosePrivateChat(conversationId)}
               onDelete={() => handleDeleteConversation(conversationId)}
-              className={closingWindows.privateChats.has(conversationId) ? 'fade-out' : 'fade-in'}
+              className={`${closingWindows.privateChats.has(conversationId) ? 'fade-out' : 'fade-in'} ${isMobile ? 'full-screen-modal' : ''}`}
           />
         ))}
       </Portal>
