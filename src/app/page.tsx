@@ -10,7 +10,8 @@ import GameModeSelectionModal from '@/components/GameModeSelectionModal';
 import NoteModal from '@/components/NoteModal';
 import InventoryPanel from '@/components/InventoryPanel';
 import CharactersPanel from '@/components/CharactersPanel';
-import GlobalChat from '@/components/GlobalChat'; // YENİ: Global sohbet component'ini import et
+import GlobalChat from '@/components/GlobalChat';
+import PrivateChat from '@/components/PrivateChat';
 
 // Gerekli tipleri doğrudan bu dosyada tanımlıyoruz
 interface Message { role: 'user' | 'assistant'; content: string; }
@@ -70,9 +71,8 @@ export default function Home() {
   const [npcs, setNpcs] = useState<NPC[]>([]);
   const [isInventoryOpen, setIsInventoryOpen] = useState(true);
   const [isCharactersOpen, setIsCharactersOpen] = useState(true);
-
-  // YENİ: Global sohbet penceresinin durumunu tutan state
   const [isChatOpen, setIsChatOpen] = useState(false);
+  const [activePrivateChats, setActivePrivateChats] = useState<Map<string, { id: string; username: string }>>(new Map());
 
   const fetchStories = useCallback(async (user: User) => {
     const { data } = await supabase.from('games').select('*').eq('user_id', user.id).order('created_at', { ascending: false });
@@ -128,12 +128,7 @@ export default function Home() {
         const titleResponse = await fetch('/api/generate-title', { method: 'POST', body: JSON.stringify({ storyText: cleanedMessage }), headers: { 'Content-Type': 'application/json' }});
         const { title } = await titleResponse.json();
         const finalTitle = title || activeStory.title || "İsimsiz Macera";
-        const { data: updatedStory } = await supabase.from('games').update({ 
-            history: initialHistory, 
-            title: finalTitle,
-            inventory: initialInventory,
-            npcs: initialNpcs
-        }).eq('id', activeStory.id).select().single();
+        const { data: updatedStory } = await supabase.from('games').update({ history: initialHistory, title: finalTitle, inventory: initialInventory, npcs: initialNpcs }).eq('id', activeStory.id).select().single();
         if (updatedStory) {
           const finalUpdatedStory = updatedStory as Story;
           setStories(current => current.map(s => s.id === activeStory.id ? finalUpdatedStory : s));
@@ -247,27 +242,62 @@ export default function Home() {
       setIsLoading(false);
     }
   };
-
+  
   const handleLogout = async () => {
     await supabase.auth.signOut();
     router.push('/login');
+  };
+
+  const handleStartPrivateChat = async (userId: string, username: string) => {
+    if (userId === session?.user.id) return;
+    
+    for (const user of activePrivateChats.values()) {
+        if (user.id === userId) {
+          console.log("Sohbet zaten açık.");
+          return;
+        }
+    }
+
+    const response = await fetch('/api/conversations', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ other_user_id: userId }),
+    });
+    const { conversation_id } = await response.json();
+    if (conversation_id) {
+        setActivePrivateChats(prev => new Map(prev).set(conversation_id, { id: userId, username: username }));
+    }
+  };
+  
+  const handleClosePrivateChat = (conversationId: string) => {
+    setActivePrivateChats(prev => {
+        const newMap = new Map(prev);
+        newMap.delete(conversationId);
+        return newMap;
+    });
   };
 
   useEffect(() => {
     storyContainerRef.current?.scrollTo(0, storyContainerRef.current.scrollHeight);
     if (!isLoading && !isTyping) inputRef.current?.focus();
   }, [history, isLoading, isTyping]);
-
+  
   if (!session) return <div>Yönlendiriliyor...</div>;
 
   return (
     <>
       {isGameModeModalOpen && <GameModeSelectionModal onStartStory={handleStartStory} onClose={() => setIsGameModeModalOpen(false)} />}
       {isNoteModalOpen && <NoteModal initialNotes={currentNotes} onSave={handleSaveNotes} onClose={() => setIsNoteModalOpen(false)} />}
-      
-      {/* YENİ: Sohbet penceresi koşullu olarak render ediliyor */}
-      {isChatOpen && <GlobalChat session={session} onClose={() => setIsChatOpen(false)} />}
-      
+      {isChatOpen && <GlobalChat session={session} onClose={() => setIsChatOpen(false)} onStartPrivateChat={handleStartPrivateChat} />}
+      {Array.from(activePrivateChats.entries()).map(([conversationId, otherUser]) => (
+        <PrivateChat 
+            key={conversationId}
+            session={session}
+            conversationId={conversationId}
+            otherUser={otherUser}
+            onClose={() => handleClosePrivateChat(conversationId)}
+        />
+      ))}
       <div className="layout-wrapper">
         <div className={`sidebar-overlay ${isSidebarOpen ? 'open' : ''}`} onClick={() => setIsSidebarOpen(false)}></div>
         <button className="hamburger-button" onClick={() => setIsSidebarOpen(!isSidebarOpen)}>☰</button>
@@ -276,7 +306,6 @@ export default function Home() {
         </div>
         <div className="main-layout">
           <header className="header">
-            {/* YENİ: Header'ın sol tarafına sohbet butonu eklendi */}
             <div style={{flex: 1, display: 'flex', justifyContent: 'flex-start'}}>
                 <button className="chat-toggle-button" onClick={() => setIsChatOpen(true)}>
                     Global Sohbet
@@ -290,13 +319,10 @@ export default function Home() {
           </header>
           <main className="main-content">
             {activeStory && <button className="notes-button" onClick={() => setIsNoteModalOpen(true)}>Not Defteri</button>}
-            
             <CharactersPanel npcs={npcs} isOpen={isCharactersOpen} onToggle={() => setIsCharactersOpen(!isCharactersOpen)} />
-            
             {activeStory?.game_mode === 'prison_escape' && (
               <InventoryPanel items={inventory} isOpen={isInventoryOpen} onToggle={() => setIsInventoryOpen(!isInventoryOpen)} />
             )}
-
             <div className="game-wrapper">
               <div ref={storyContainerRef} className="story-box">
                 {isLoading && history.length === 0 && <p style={{textAlign: 'center'}}>Yeni macera oluşturuluyor...</p>}

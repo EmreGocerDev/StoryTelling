@@ -18,7 +18,7 @@ interface OnlineUser {
 }
 
 // ================== DÜZELTME BAŞLANGIÇ ==================
-// 'any' kullanmak yerine Supabase'den gelen verinin tipini net olarak tanımlıyoruz
+// 'any' kullanımını kaldırarak tipi daha net hale getiriyoruz
 interface SupabasePresence {
   key: string;
   username: string;
@@ -31,9 +31,10 @@ interface PresenceState {
 interface Props {
   session: Session | null;
   onClose: () => void;
+  onStartPrivateChat: (userId: string, username: string) => void;
 }
 
-const GlobalChat: React.FC<Props> = ({ session, onClose }) => {
+const GlobalChat: React.FC<Props> = ({ session, onClose, onStartPrivateChat }) => {
   const supabase = createClientComponentClient();
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [onlineUsers, setOnlineUsers] = useState<OnlineUser[]>([]);
@@ -48,11 +49,16 @@ const GlobalChat: React.FC<Props> = ({ session, onClose }) => {
     if (!session) return;
 
     const fetchInitialMessages = async () => {
-      const { data } = await supabase
+      const { data, error } = await supabase
         .from('chat_messages')
         .select('*, profiles(username)')
         .order('created_at', { ascending: false })
         .limit(50);
+
+      if (error) {
+        console.error("Mesaj geçmişi çekilirken hata:", error);
+        return;
+      }
       if (data) setMessages(data.reverse());
     };
     fetchInitialMessages();
@@ -67,9 +73,9 @@ const GlobalChat: React.FC<Props> = ({ session, onClose }) => {
 
     channel.on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'chat_messages' }, 
       async (payload) => {
-        const { data: profileData } = await supabase.from('profiles').select('username').eq('id', (payload.new as ChatMessage).user_id).single();
-        const newMessage = { ...(payload.new as ChatMessage), profiles: profileData };
-        setMessages(prev => [...prev.slice(-100), newMessage]);
+        const newMessage = payload.new as ChatMessage;
+        const { data: profileData } = await supabase.from('profiles').select('username').eq('id', newMessage.user_id).single();
+        setMessages(prev => [...prev.slice(-100), { ...newMessage, profiles: profileData }]);
       }
     );
 
@@ -77,7 +83,6 @@ const GlobalChat: React.FC<Props> = ({ session, onClose }) => {
       const presenceState: PresenceState = channel.presenceState();
       
       const users = Object.keys(presenceState).map(presenceId => {
-        // 'any' yerine yeni oluşturduğumuz 'SupabasePresence' tipini kullanıyoruz
         const pres = presenceState[presenceId][0] as SupabasePresence;
         return { user_id: pres.key, username: pres.username };
       })
@@ -117,11 +122,23 @@ const GlobalChat: React.FC<Props> = ({ session, onClose }) => {
     });
   };
 
+  const handleClearChat = async () => {
+    if (window.confirm("Global sohbeti temizlemek istediğinizden emin misiniz? Bu işlem geri alınamaz.")) {
+      const response = await fetch('/api/chat/clear', { method: 'POST' });
+      if(response.ok) {
+        setMessages([]);
+      }
+    }
+  };
+
   return (
     <div className="global-chat-container">
       <div className="chat-header">
         <h4>Global Sohbet</h4>
-        <button onClick={onClose} className="chat-close-button">X</button>
+        <div>
+          <button onClick={handleClearChat} className="chat-clear-button">Temizle</button>
+          <button onClick={onClose} className="chat-close-button">X</button>
+        </div>
       </div>
       <div className="chat-body">
         <div className="chat-messages-area">
@@ -136,7 +153,16 @@ const GlobalChat: React.FC<Props> = ({ session, onClose }) => {
         <div className="chat-online-users-area">
           <h5>Çevrimiçi ({onlineUsers.length})</h5>
           <ul>
-            {onlineUsers.map(user => <li key={user.user_id}>{user.username}</li>)}
+            {onlineUsers.map(user => (
+              <li 
+                key={user.user_id} 
+                onClick={() => user.user_id !== session?.user.id && onStartPrivateChat(user.user_id, user.username)}
+                className={user.user_id === session?.user.id ? 'me' : 'other'}
+                title={user.user_id !== session?.user.id ? `${user.username} ile özel sohbet başlat` : ''}
+              >
+                {user.username} {user.user_id === session?.user.id ? '(Siz)' : ''}
+              </li>
+            ))}
           </ul>
         </div>
       </div>
