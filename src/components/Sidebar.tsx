@@ -2,20 +2,27 @@
 
 import type { Session } from '@supabase/auth-helpers-nextjs';
 
-interface Message {
+// Gerekli tipleri doğrudan bu dosyada tanımlıyoruz
+interface Message { 
   role: 'user' | 'assistant';
   content: string;
 }
-
+interface NPC { 
+  name: string;
+  description: string;
+  state: string;
+}
 interface Story {
   id: number;
   created_at: string;
   history: Message[] | null;
   user_id: string;
   title?: string;
-  game_mode?: string; // game_mode eklendi
+  game_mode?: string;
+  npcs?: NPC[] | null;
 }
 
+// DÜZELTME: onChatToggle prop'u buraya eklendi
 interface SidebarProps {
   stories: Story[];
   session: Session | null;
@@ -25,6 +32,8 @@ interface SidebarProps {
   onSelectStory: (id: number) => void;
   onDeleteStory: (id: number) => void;
   onLogout: () => void;
+  onChatToggle: () => void;
+  
 }
 
 const Sidebar: React.FC<SidebarProps> = ({
@@ -36,6 +45,7 @@ const Sidebar: React.FC<SidebarProps> = ({
   onSelectStory,
   onDeleteStory,
   onLogout,
+  onChatToggle, // DÜZELTME: Prop burada da karşılandı
 }) => {
   const storiesReachedLimit = stories.length >= storyLimit;
 
@@ -45,7 +55,7 @@ const Sidebar: React.FC<SidebarProps> = ({
         <h2 className="sidebar-title">Hikayelerim</h2>
         <button
           className="new-story-button white-button"
-          onClick={onNewStory} // Artık sadece onNewStory'yi çağırıyor
+          onClick={onNewStory}
           disabled={storiesReachedLimit}
           title={storiesReachedLimit ? `Maksimum ${storyLimit} hikayeye ulaştınız.` : 'Yeni bir maceraya başla'}
         >
@@ -65,9 +75,7 @@ const Sidebar: React.FC<SidebarProps> = ({
             >
               {story.title || 'İsimsiz Macera'}
             </span>
-            {/* YENİ: Oyun modu etiketi */}
-            <span className="story-mode-badge">{story.game_mode || 'classic'}</span>
-
+            <span className="story-mode-badge">{story.game_mode?.replace(/_/g, ' ') || 'classic'}</span>
             <button
               className="delete-button"
               onClick={() => onDeleteStory(story.id)}
@@ -78,6 +86,10 @@ const Sidebar: React.FC<SidebarProps> = ({
           </li>
         ))}
       </ul>
+      
+      <button className="sidebar-chat-button" onClick={onChatToggle}>
+        Global Sohbet
+      </button>
 
       <div className="sidebar-footer">
         {session?.user?.email && (

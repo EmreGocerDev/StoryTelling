@@ -16,7 +16,7 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'Mesaj içeriği boş olamaz.' }, { status: 400 });
   }
   
-  // Gelen mesajı veritabanına ekle
+  // Gelen mesajı veritabanına ekle. Realtime bu değişikliği yakalayıp herkese yayınlayacak.
   const { error } = await supabase.from('chat_messages').insert({
     user_id: user.id,
     content: content.trim()

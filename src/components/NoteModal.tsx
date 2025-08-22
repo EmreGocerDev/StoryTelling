@@ -6,6 +6,7 @@ interface Props {
   initialNotes: string;
   onSave: (notes: string) => void;
   onClose: () => void;
+  className?: string;
 }
 
 const NoteModal: React.FC<Props> = ({ initialNotes, onSave, onClose }) => {

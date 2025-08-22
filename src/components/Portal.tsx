@@ -15,8 +15,6 @@ const Portal: React.FC<Props> = ({ children }) => {
     return () => setMounted(false);
   }, []);
 
-  // mounted true ise, yani component tarayıcıda yüklendiyse portalı oluştur.
-  // Bu, sunucu tarafında (server-side) render hatası almamızı engeller.
   return mounted
     ? createPortal(children, document.body)
     : null;

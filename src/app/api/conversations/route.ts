@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
 import { cookies } from 'next/headers';
 
-// Önemli: Bu dosyanın çalışması için Supabase SQL Editor'de 
+// ÖNEMLİ: Bu dosyanın çalışması için Supabase SQL Editor'de 
 // aşağıdaki fonksiyonu bir kez çalıştırmanız gerekir.
 /*
   create or replace function get_conversation_between_users(
@@ -19,7 +19,8 @@ import { cookies } from 'next/headers';
 */
 
 export async function POST(req: Request) {
-  const supabase = createRouteHandlerClient({ cookies });
+   const cookieStore = cookies();
+  const supabase = createRouteHandlerClient({ cookies: () => cookieStore });
   const { data: { user } } = await supabase.auth.getUser();
 
   if (!user) {
@@ -32,22 +33,25 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'Diğer kullanıcı ID\'si gerekli.' }, { status: 400 });
   }
 
+  // İki kullanıcı arasında zaten bir sohbet var mı diye kontrol et
   const { data: existingData, error: rpcError } = await supabase.rpc('get_conversation_between_users', {
     user1_id: user.id,
     user2_id: other_user_id,
   });
 
   if (rpcError) {
-      console.error("RPC Error:", rpcError);
+      console.error("RPC Hatası:", rpcError);
       if (rpcError.code === '42883') {
           return NextResponse.json({ error: 'Veritabanı fonksiyonu eksik: `get_conversation_between_users`' }, { status: 500 });
       }
+      return NextResponse.json({ error: 'Sohbet kontrol edilirken bir hata oluştu.' }, { status: 500 });
   }
 
   if (existingData && existingData.length > 0) {
     return NextResponse.json({ conversation_id: existingData[0].id });
   }
 
+  // Yeni bir sohbet oluştur
   const { data: newConversation, error: convError } = await supabase
     .from('conversations')
     .insert({})
@@ -55,15 +59,18 @@ export async function POST(req: Request) {
     .single();
 
   if (convError || !newConversation) {
+    console.error("Sohbet oluşturma hatası:", convError);
     return NextResponse.json({ error: 'Sohbet oluşturulamadı.' }, { status: 500 });
   }
 
+  // İki kullanıcıyı da bu sohbete katılımcı olarak ekle
   const { error: participantsError } = await supabase.from('conversation_participants').insert([
     { conversation_id: newConversation.id, user_id: user.id },
     { conversation_id: newConversation.id, user_id: other_user_id },
   ]);
 
   if (participantsError) {
+    console.error("Katılımcı ekleme hatası:", participantsError);
     return NextResponse.json({ error: 'Katılımcılar eklenemedi.' }, { status: 500 });
   }
 

@@ -9,6 +9,7 @@ type Difficulty = 'easy' | 'normal' | 'hard';
 interface Props {
   onStartStory: (mode: GameMode, difficulty: Difficulty, customPrompt?: string, legendName?: string) => void;
   onClose: () => void;
+  className?: string;
 }
 
 const GameModeSelectionModal: React.FC<Props> = ({ onStartStory, onClose }) => {
