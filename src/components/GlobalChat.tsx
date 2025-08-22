@@ -16,9 +16,17 @@ interface OnlineUser {
   user_id: string;
   username: string;
 }
-interface PresenceState {
-  [key: string]: { user_id: string, username: string }[];
+
+// ================== DÜZELTME BAŞLANGIÇ ==================
+// 'any' kullanmak yerine Supabase'den gelen verinin tipini net olarak tanımlıyoruz
+interface SupabasePresence {
+  key: string;
+  username: string;
 }
+interface PresenceState {
+  [key: string]: SupabasePresence[];
+}
+// ================== DÜZELTME BİTİŞ ==================
 
 interface Props {
   session: Session | null;
@@ -39,18 +47,12 @@ const GlobalChat: React.FC<Props> = ({ session, onClose }) => {
   useEffect(() => {
     if (!session) return;
 
-    // Başlangıçta son 50 mesajı çek
     const fetchInitialMessages = async () => {
-      const { data, error } = await supabase
+      const { data } = await supabase
         .from('chat_messages')
         .select('*, profiles(username)')
         .order('created_at', { ascending: false })
         .limit(50);
-
-      if (error) {
-        console.error("Mesaj geçmişi çekilirken hata:", error);
-        return;
-      }
       if (data) setMessages(data.reverse());
     };
     fetchInitialMessages();
@@ -65,9 +67,9 @@ const GlobalChat: React.FC<Props> = ({ session, onClose }) => {
 
     channel.on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'chat_messages' }, 
       async (payload) => {
-        const newMessage = payload.new as ChatMessage;
-        const { data: profileData } = await supabase.from('profiles').select('username').eq('id', newMessage.user_id).single();
-        setMessages(prev => [...prev.slice(-100), { ...newMessage, profiles: profileData }]);
+        const { data: profileData } = await supabase.from('profiles').select('username').eq('id', (payload.new as ChatMessage).user_id).single();
+        const newMessage = { ...(payload.new as ChatMessage), profiles: profileData };
+        setMessages(prev => [...prev.slice(-100), newMessage]);
       }
     );
 
@@ -75,7 +77,8 @@ const GlobalChat: React.FC<Props> = ({ session, onClose }) => {
       const presenceState: PresenceState = channel.presenceState();
       
       const users = Object.keys(presenceState).map(presenceId => {
-        const pres = presenceState[presenceId][0] as any; // Bu 'any' Supabase'in tip tanımından kaynaklı geçici bir çözüm
+        // 'any' yerine yeni oluşturduğumuz 'SupabasePresence' tipini kullanıyoruz
+        const pres = presenceState[presenceId][0] as SupabasePresence;
         return { user_id: pres.key, username: pres.username };
       })
       .filter((user, index, self) => 
@@ -107,7 +110,6 @@ const GlobalChat: React.FC<Props> = ({ session, onClose }) => {
     if (input.trim().length === 0) return;
     const tempInput = input;
     setInput('');
-    // Mesajı Vercel'deki API rotamıza gönderiyoruz
     await fetch('/api/chat', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
