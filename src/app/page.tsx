@@ -10,7 +10,9 @@ import GameModeSelectionModal from '@/components/GameModeSelectionModal';
 import NoteModal from '@/components/NoteModal';
 import InventoryPanel from '@/components/InventoryPanel';
 import CharactersPanel from '@/components/CharactersPanel';
+import GlobalChat from '@/components/GlobalChat'; // YENİ: Global sohbet component'ini import et
 
+// Gerekli tipleri doğrudan bu dosyada tanımlıyoruz
 interface Message { role: 'user' | 'assistant'; content: string; }
 interface NPC { name: string; description: string; state: string; }
 interface Story { id: number; created_at: string; history: Message[] | null; user_id: string; title?: string; game_mode?: string; custom_prompt?: string; notes?: string; difficulty?: string; inventory?: string[] | null; npcs?: NPC[] | null; legend_name?: string; }
@@ -69,6 +71,9 @@ export default function Home() {
   const [isInventoryOpen, setIsInventoryOpen] = useState(true);
   const [isCharactersOpen, setIsCharactersOpen] = useState(true);
 
+  // YENİ: Global sohbet penceresinin durumunu tutan state
+  const [isChatOpen, setIsChatOpen] = useState(false);
+
   const fetchStories = useCallback(async (user: User) => {
     const { data } = await supabase.from('games').select('*').eq('user_id', user.id).order('created_at', { ascending: false });
     if (data) setStories(data as Story[]);
@@ -113,30 +118,22 @@ export default function Home() {
       .then(res => res.json())
       .then(async (storyData) => {
         if (!storyData.message) return;
-
         const itemParseResult = parseResponseForItems(storyData.message);
         const finalParseResult = parseResponseForCharacters(itemParseResult.cleanedMessage);
-        
         const { cleanedMessage, updatedNpcs } = finalParseResult;
         const { newItems } = itemParseResult;
-
         const initialHistory: Message[] = [{ role: 'assistant', content: cleanedMessage }];
         const initialInventory = [...(activeStory.inventory || []), ...newItems];
         const initialNpcs = [...((activeStory.npcs as NPC[]) || []), ...updatedNpcs];
-
         const titleResponse = await fetch('/api/generate-title', { method: 'POST', body: JSON.stringify({ storyText: cleanedMessage }), headers: { 'Content-Type': 'application/json' }});
         const { title } = await titleResponse.json();
-        
-        // ================== BAŞLIK DÜZELTMESİ ==================
         const finalTitle = title || activeStory.title || "İsimsiz Macera";
-        
         const { data: updatedStory } = await supabase.from('games').update({ 
             history: initialHistory, 
             title: finalTitle,
             inventory: initialInventory,
             npcs: initialNpcs
         }).eq('id', activeStory.id).select().single();
-        
         if (updatedStory) {
           const finalUpdatedStory = updatedStory as Story;
           setStories(current => current.map(s => s.id === activeStory.id ? finalUpdatedStory : s));
@@ -267,6 +264,10 @@ export default function Home() {
     <>
       {isGameModeModalOpen && <GameModeSelectionModal onStartStory={handleStartStory} onClose={() => setIsGameModeModalOpen(false)} />}
       {isNoteModalOpen && <NoteModal initialNotes={currentNotes} onSave={handleSaveNotes} onClose={() => setIsNoteModalOpen(false)} />}
+      
+      {/* YENİ: Sohbet penceresi koşullu olarak render ediliyor */}
+      {isChatOpen && <GlobalChat session={session} onClose={() => setIsChatOpen(false)} />}
+      
       <div className="layout-wrapper">
         <div className={`sidebar-overlay ${isSidebarOpen ? 'open' : ''}`} onClick={() => setIsSidebarOpen(false)}></div>
         <button className="hamburger-button" onClick={() => setIsSidebarOpen(!isSidebarOpen)}>☰</button>
@@ -275,7 +276,12 @@ export default function Home() {
         </div>
         <div className="main-layout">
           <header className="header">
-            <div style={{flex: 1}}></div>
+            {/* YENİ: Header'ın sol tarafına sohbet butonu eklendi */}
+            <div style={{flex: 1, display: 'flex', justifyContent: 'flex-start'}}>
+                <button className="chat-toggle-button" onClick={() => setIsChatOpen(true)}>
+                    Global Sohbet
+                </button>
+            </div>
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
               <h1 className="title">STORYTELLING</h1>
               <p className="game-mode-subtitle">{activeStory ? (activeStory.game_mode?.replace(/_/g, ' ') || 'classic') : ''}</p>
