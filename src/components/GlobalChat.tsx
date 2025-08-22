@@ -10,7 +10,7 @@ interface ChatMessage {
   created_at: string;
   content: string;
   user_id: string;
-  profiles: { username: string } | null; // Bu yapı artık doğru çalışacak
+  profiles: { username: string } | null;
 }
 interface OnlineUser {
   user_id: string;
@@ -19,6 +19,7 @@ interface OnlineUser {
 interface PresenceState {
   [key: string]: { user_id: string, username: string }[];
 }
+
 interface Props {
   session: Session | null;
   onClose: () => void;
@@ -38,12 +39,11 @@ const GlobalChat: React.FC<Props> = ({ session, onClose }) => {
   useEffect(() => {
     if (!session) return;
 
-    // ================== GÜNCELLEME 1: İLK MESAJLARI ÇEKME ==================
-    // Veritabanı ilişkisi artık doğru olduğu için bu sorgu düzgün çalışacak.
+    // Başlangıçta son 50 mesajı çek
     const fetchInitialMessages = async () => {
       const { data, error } = await supabase
         .from('chat_messages')
-        .select('*, profiles(username)') // Bu join artık çalışır
+        .select('*, profiles(username)')
         .order('created_at', { ascending: false })
         .limit(50);
 
@@ -56,40 +56,40 @@ const GlobalChat: React.FC<Props> = ({ session, onClose }) => {
     fetchInitialMessages();
 
     const channel = supabase.channel('global-chat', {
-      config: { presence: { key: session.user.id } },
+      config: {
+        presence: {
+          key: session.user.id,
+        },
+      },
     });
 
     channel.on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'chat_messages' }, 
       async (payload) => {
         const newMessage = payload.new as ChatMessage;
-        // Yeni gelen mesajın profil bilgisini de ekleyerek state'i güncelliyoruz
         const { data: profileData } = await supabase.from('profiles').select('username').eq('id', newMessage.user_id).single();
         setMessages(prev => [...prev.slice(-100), { ...newMessage, profiles: profileData }]);
       }
     );
 
-    // ================== GÜNCELLEME 2: ÇEVRİMİÇİ KULLANICI LİSTESİ ==================
     channel.on('presence', { event: 'sync' }, () => {
       const presenceState: PresenceState = channel.presenceState();
       
       const users = Object.keys(presenceState).map(presenceId => {
-        const pres = presenceState[presenceId][0] as any;
+        const pres = presenceState[presenceId][0] as any; // Bu 'any' Supabase'in tip tanımından kaynaklı geçici bir çözüm
         return { user_id: pres.key, username: pres.username };
       })
       .filter((user, index, self) => 
         user.user_id && user.username && index === self.findIndex((u) => u.user_id === user.user_id)
       );
+
       setOnlineUsers(users);
     });
 
-    // ================== GÜNCELLEME 3: KANALA ABONE OLMA VE PROFİL KONTROLÜ ==================
     channel.subscribe(async (status) => {
       if (status === 'SUBSCRIBED') {
         const { data: profile } = await supabase.from('profiles').select('username').eq('id', session.user.id).single();
         const username = profile?.username || session.user.email?.split('@')[0] || `kullanici-${session.user.id.substring(0, 5)}`;
         
-        // Kullanıcının profili veya kullanıcı adı yoksa, oluştur/güncelle
-        // Bu, diğer kullanıcıların sizin adınızı görebilmesi için kritiktir.
         if (!profile || !profile.username) {
             await supabase.from('profiles').upsert({ id: session.user.id, username: username });
         }
@@ -107,8 +107,7 @@ const GlobalChat: React.FC<Props> = ({ session, onClose }) => {
     if (input.trim().length === 0) return;
     const tempInput = input;
     setInput('');
-    // Mesajı Vercel'deki API rotamıza gönderiyoruz, o da veritabanına kaydediyor.
-    // Realtime sayesinde bu kayıt otomatik olarak herkese yayınlanıyor.
+    // Mesajı Vercel'deki API rotamıza gönderiyoruz
     await fetch('/api/chat', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
