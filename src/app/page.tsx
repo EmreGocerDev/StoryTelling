@@ -210,50 +210,49 @@ export default function Home() {
     }
   }, [activeStory, supabase]);
 
-  useEffect(() => {
+  // DÜZELTME: En sağlam real-time abonelik useEffect'i
+  // src/app/page.tsx DOSYASINDAKİ DEĞİŞTİRİLECEK KOD BLOKU
+
+useEffect(() => {
     if (!activeStory?.is_multiplayer || !activeStory.id) return;
 
     const channelName = `game-${activeStory.id}`;
     const channel = supabase.channel(channelName);
-
-    if (supabase.getChannels().find(c => c.topic === `realtime:public:games:id=eq.${activeStory.id}`)) {
-      return;
-    }
-
-    channel.on(
-      'postgres_changes',
-      { event: '*', schema: 'public', table: 'games', filter: `id=eq.${activeStory.id}` },
-      (payload) => {
-        const newGameData = payload.new as Story;
-        if (newGameData) {
-          setActiveStory(currentGame => ({ ...currentGame, ...newGameData }));
-          setHistory((newGameData.history as Message[]) || []);
-          setInventory(newGameData.inventory || []);
-          setNpcs((newGameData.npcs as NPC[]) || []);
-          setCurrentNotes(newGameData.notes || "");
-          setCurrentPlayerTurn(newGameData.current_player_turn_id || null);
-
-          const lastMessage = newGameData.history ? newGameData.history[newGameData.history.length - 1] : null;
-          if (lastMessage && lastMessage.role === 'assistant') {
-            setIsTyping(true);
-          }
+    
+    const gameUpdateSubscription = channel.on(
+        'postgres_changes', 
+        { event: '*', schema: 'public', table: 'games', filter: `id=eq.${activeStory.id}` }, 
+        (payload) => {
+            const newGameData = payload.new as Story;
+            if (newGameData) {
+                setActiveStory(currentGame => ({ ...currentGame, ...newGameData }));
+                setHistory((newGameData.history as Message[]) || []);
+                setInventory(newGameData.inventory || []);
+                setNpcs((newGameData.npcs as NPC[]) || []);
+                setCurrentNotes(newGameData.notes || "");
+                setCurrentPlayerTurn(newGameData.current_player_turn_id || null);
+                
+                
+                const lastMessage = newGameData.history ? newGameData.history[newGameData.history.length - 1] : null;
+                if (lastMessage && lastMessage.role === 'assistant') {
+                    setIsTyping(true);
+                }
+            }
         }
-      }
-    ).subscribe();
-
-    channel.on('postgres_changes', { event: '*', schema: 'public', table: 'game_participants', filter: `game_id=eq.${activeStory.id}` }, () => {
-      const fetchUpdatedParticipants = async () => {
-        const { data } = await supabase.from('game_participants').select('*, profiles(username, chat_color)').eq('game_id', activeStory.id);
-        if (data) setGameParticipants(data as GameParticipant[]);
-      };
-      fetchUpdatedParticipants();
-    }).subscribe();
+    ).subscribe((status) => {
+        if (status === 'SUBSCRIBED') {
+            // İsteğe bağlı: Konsolda abonelik durumunu görmek için
+            console.log(`'${channelName}' kanalına başarıyla abone olundu.`);
+        }
+    });
 
     return () => {
-      supabase.removeChannel(channel);
+        // İsteğe bağlı: Konsolda abonelik durumunu görmek için
+        console.log(`'${channelName}' kanalından abonelik kaldırılıyor.`);
+        supabase.removeChannel(channel);
     };
 
-  }, [activeStory?.id, activeStory?.is_multiplayer, supabase]);
+}, [activeStory?.id, supabase]);
 
   const handleStartStory = useCallback(async (mode: string, difficulty: string, customPrompt?: string, legendName?: string) => {
     if (!session?.user || stories.length >= STORY_LIMIT) return;
@@ -641,7 +640,10 @@ export default function Home() {
           <main className="main-content">
             {activeStory && <button className="notes-button" onClick={() => setIsNoteModalOpen(true)}>Not Defteri</button>}
             {activeStory?.is_multiplayer && (
-              <button className="notes-button ooc-chat-button" onClick={() => setIsOocChatOpen(true)}>
+              <button
+                className="notes-button ooc-chat-button"
+                onClick={() => setIsOocChatOpen(true)}
+              >
                 OOC Chat
               </button>
             )}
@@ -686,7 +688,6 @@ export default function Home() {
         ))}
         {activeStory?.is_multiplayer && isOocChatOpen && (
           <DndOocChat
-            
             gameId={activeStory.id.toString()}
             onClose={() => setIsOocChatOpen(false)}
           />
