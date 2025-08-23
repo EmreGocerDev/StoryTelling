@@ -1,9 +1,9 @@
+// src/app/api/conversations/delete/route.ts
 import { NextRequest, NextResponse } from 'next/server';
 import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
 import { cookies } from 'next/headers';
 
 export async function POST(request: NextRequest) {
-  // DÜZELTME: cookies() bu şekilde çağrılmalı
   const cookieStore = cookies();
   const supabase = createRouteHandlerClient({ cookies: () => cookieStore });
   

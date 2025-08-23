@@ -25,11 +25,19 @@ interface SupabasePresence {
 interface PresenceState {
   [key: string]: SupabasePresence[];
 }
+interface GameParticipant {
+  id: string;
+  game_id: number;
+  user_id: string;
+  character_name: string | null;
+  profiles: { username: string; chat_color: string } | null;
+}
 interface Props {
   session: Session | null;
   onClose: () => void;
   onStartPrivateChat: (userId: string, username: string) => void;
   className?: string;
+  gameParticipants: GameParticipant[];
 }
 
 const GlobalChat: React.FC<Props> = ({ session, onClose, onStartPrivateChat, className }) => {
@@ -60,7 +68,9 @@ const GlobalChat: React.FC<Props> = ({ session, onClose, onStartPrivateChat, cla
         .from('profiles')
         .select('*');
 
-    if (profilesData) {
+    if (profilesError) {
+        console.error("Kullanıcı profilleri çekilirken hata:", profilesError);
+    } else if (profilesData) {
         setAllUsers(profilesData as Profile[]);
         const currentUserProfile = profilesData.find(p => p.id === session?.user.id);
         if (currentUserProfile) {
@@ -68,8 +78,6 @@ const GlobalChat: React.FC<Props> = ({ session, onClose, onStartPrivateChat, cla
             setSettingsInput(currentUserProfile.username);
             setSettingsColor(currentUserProfile.chat_color || '#FFFFFF');
         }
-    } else if (profilesError) {
-        console.error("Kullanıcı profilleri çekilirken hata:", profilesError);
     }
   }, [session, supabase]);
 
@@ -84,8 +92,12 @@ const GlobalChat: React.FC<Props> = ({ session, onClose, onStartPrivateChat, cla
         .select('*, profiles(username, chat_color)')
         .order('created_at', { ascending: false })
         .limit(50);
-      if (messagesData) setMessages(messagesData.reverse() as ChatMessage[]);
-      else if (messagesError) console.error("Mesaj geçmişi çekilirken hata:", messagesError);
+        
+      if (messagesError) {
+        console.error("Mesaj geçmişi çekilirken hata:", messagesError);
+      } else if (messagesData) {
+        setMessages(messagesData.reverse() as ChatMessage[]);
+      }
     };
     
     fetchInitialData();

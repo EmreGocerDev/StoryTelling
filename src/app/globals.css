@@ -104,6 +104,13 @@ button, input, textarea { font-family: inherit; }
 /* ---------- OYUN İÇİ PANELLER ---------- */
 .notes-button { position: absolute; top: 1rem; right: 1rem; background-color: #111; border: 1px solid white; color: white; padding: 0.5rem 1rem; border-radius: 4px; cursor: pointer; z-index: 10; font-size: 1rem; }
 .notes-button:hover { background-color: #333; }
+
+/* YENİ EKLEME: OOC Chat düğmesi için özel stil */
+.ooc-chat-button {
+  top: 4rem;
+  z-index: 11; /* Kişiler panelinin (10) üzerinde olmasını sağlar */
+}
+
 .inventory-panel, .characters-panel { position: absolute; right: 1rem; width: 200px; background-color: rgba(10, 10, 10, 0.8); border: 1px solid #555; border-radius: 4px; z-index: 10; padding: 0; }
 .inventory-panel { bottom: 1rem; }
 .characters-panel { top: 5rem; }
@@ -111,6 +118,7 @@ button, input, textarea { font-family: inherit; }
 .panel-header h4 { font-size: 1.1rem; }
 .panel-toggle-icon { font-size: 0.8rem; }
 .panel-content { padding: 0.5rem 1rem 1rem 1rem; }
+.characters-panel .panel-content, .inventory-panel .panel-content { padding-top: 0.25rem; }
 .inventory-panel ul, .characters-panel ul { list-style: none; padding: 0; }
 .inventory-item, .character-item { padding: 0.25rem 0; text-transform: capitalize; }
 .inventory-empty { color: #888; font-size: 0.9rem; text-align: center; }
@@ -122,8 +130,29 @@ button, input, textarea { font-family: inherit; }
 .character-tooltip p:last-child { margin-bottom: 0; }
 
 /* ---------- MODAL PENCERESİ STİLLERİ ---------- */
-.modal-overlay { position: fixed; inset: 0; background-color: rgba(0, 0, 0, 0.75); display: flex; justify-content: center; align-items: center; z-index: 1000; }
-.modal-content { background-color: #0a0a0a; border: 1px solid white; padding: 2rem; border-radius: 4px; width: 90%; max-width: 900px; color: white; display: flex; flex-direction: column; gap: 1rem; max-height: 90vh; }
+.modal-overlay { 
+  position: fixed; 
+  inset: 0; 
+  background-color: rgba(0, 0, 0, 0.75); 
+  display: flex; 
+  justify-content: center; 
+  align-items: center; 
+  z-index: 1000; 
+}
+.modal-content { 
+  background-color: #0a0a0a; 
+  border: 1px solid white; 
+  padding: 2rem; 
+  border-radius: 4px; 
+  width: 90%; 
+  max-width: 900px; 
+  color: white; 
+  display: flex; 
+  flex-direction: column; 
+  gap: 1rem; 
+  max-height: 90vh;
+  position: relative;
+}
 .notes-textarea { width: 100%; background-color: #000; border: 1px solid #555; color: #ddd; padding: 0.75rem; font-size: 1rem; line-height: 1.6; border-radius: 2px; resize: vertical; }
 .notes-textarea:focus { outline: none; border-color: white; }
 .modal-content h2 { font-size: 2rem; text-align: center; flex-shrink: 0; }
@@ -178,9 +207,20 @@ button, input, textarea { font-family: inherit; }
 .search-results-list .mode-button:nth-child(4) { animation-delay: 0.15s; }
 
 /* ---------- GLOBAL SOHBET STİLLERİ ---------- */
-.global-chat-container, .private-chat-container { position: fixed; background-color: #0a0a0a; border: 1px solid #fff; border-radius: 4px; z-index: 1050; display: flex; flex-direction: column; box-shadow: 0 5px 15px rgba(0,0,0,0.5); }
+.global-chat-container, .private-chat-container, .dnd-ooc-chat-container { 
+  position: fixed; 
+  background-color: #0a0a0a; 
+  border: 1px solid #fff; 
+  border-radius: 4px; 
+  z-index: 1050; 
+  display: flex; 
+  flex-direction: column; 
+  box-shadow: 0 5px 15px rgba(0,0,0,0.5); 
+}
 .global-chat-container { bottom: 1rem; left: 1rem; width: 500px; height: 400px; }
 .private-chat-container { bottom: 1rem; right: 2rem; width: 350px; height: 400px; border-color: #ccc; }
+.dnd-ooc-chat-container { bottom: 1rem; left: 1rem; width: 400px; height: 350px; border-color: #ccc; }
+
 .chat-header { cursor: default; display: flex; justify-content: space-between; align-items: center; padding: 0.5rem 1rem; border-bottom: 1px solid #333; flex-shrink: 0; }
 .chat-header h4 { font-size: 1rem; }
 .chat-header-buttons { display: flex; gap: 0.5rem; align-items: center; }
@@ -202,16 +242,11 @@ button, input, textarea { font-family: inherit; }
 .chat-online-users-area li.me { color: #888; }
 .chat-input-form { display: flex; border-top: 1px solid #333; flex-shrink: 0; }
 .chat-input-form input { flex-grow: 1; background: transparent; border: none; color: #fff; padding: 0.75rem; font-size: 1rem; }
-.chat-input-form input:focus { outline: none; }
 .chat-input-form button { background-color: #333; border: none; color: #fff; padding: 0 1.5rem; cursor: pointer; font-size: 1rem; }
 .chat-input-form button:hover { background-color: #444; }
-.hamburger-button {
-  display: none;
-}
-.chat-unread-indicator {
-  color: #ff0000;
-  margin-left: 0.5rem;
-}
+.hamburger-button { display: none; }
+.chat-unread-indicator { color: #ff0000; margin-left: 0.5rem; }
+
 /* ---------- SOHBET AYARLARI ---------- */
 .settings-input-wrapper {
   position: relative;
@@ -267,20 +302,6 @@ button, input, textarea { font-family: inherit; }
   border-color: #fff;
 }
 
-/* Mobil uyumluluk için sohbet ayarları */
-@media (max-width: 768px) {
-  .chat-settings-panel {
-    left: 50%;
-    transform: translateX(-50%);
-    bottom: 5rem; /* Giriş kutusunun altına kaydır */
-    width: 90%;
-  }
-  .settings-input-wrapper {
-      position: static;
-      border-top: 1px solid #333;
-  }
-}
-
 /* ---------- MOBİL UYUMLULUK ---------- */
 @media (max-width: 768px) {
   html, body { overflow: hidden; height: 100vh; }
@@ -291,7 +312,7 @@ button, input, textarea { font-family: inherit; }
     flex-grow: 1; 
     min-height: 0; 
     order: 1;
-    overflow-y: auto; /* Düzeltme burada: dikey kaydırma çubuğu eklendi */
+    overflow-y: auto; 
   }
   .game-wrapper { 
     display: flex; 
@@ -299,7 +320,7 @@ button, input, textarea { font-family: inherit; }
     flex-grow: 1; 
     min-height: 0; 
     order: 1;
-    min-width: 0; /* Düzeltme: esnek öğelerin taşmasını önler */
+    min-width: 0;
   }
   .notes-button, .characters-panel, .inventory-panel { position: relative; width: 100%; margin-top: 1rem; right: auto; top: auto; bottom: auto; flex-shrink: 0; }
   .notes-button { order: 2; margin-bottom: 0; }
@@ -315,9 +336,23 @@ button, input, textarea { font-family: inherit; }
   .modal-content h2 { font-size: 1.5rem; }
   .mode-selection.main-modes .mode-button h3, .mode-button h3 { font-size: 1rem; }
   .chat-toggle-button { display: none; }
+
+  .chat-settings-panel {
+    left: 50%;
+    transform: translateX(-50%);
+    bottom: 5rem;
+    width: 90%;
+  }
+  .settings-input-wrapper {
+      position: static;
+      border-top: 1px solid #333;
+  }
+  
   /* Sohbet ekranlarını mobil için tam ekran yapma */
-  .global-chat-container, .private-chat-container {
-    display: flex; /* `display: none` kuralını geçersiz kılar */
+  .dnd-ooc-chat-container,
+  .global-chat-container, 
+  .private-chat-container {
+    display: flex;
     position: fixed;
     inset: 0;
     width: 100vw;
@@ -328,21 +363,24 @@ button, input, textarea { font-family: inherit; }
 }
 
 /* ---------- ANİMASYONLAR ---------- */
-@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
-.fade-in { animation: fadeIn 0.5s ease-in-out; }
-@keyframes fadeSlideDown { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
-.sidebar-chat-button {
-  width: 100%;
-  margin-top: 1rem;
-  padding: 0.75rem;
-  background: none;
-  border: 1px solid #555;
-  color: #ccc;
-  cursor: pointer;
-  border-radius: 2px;
-  font-size: 1rem;
+@keyframes slideUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
 }
-.sidebar-chat-button:hover {
-  background-color: #222;
-  border-color: #fff;
+.fade-in {
+    animation: slideUp 0.5s ease-out forwards;
+}
+.fade-out {
+    animation: slideUp 0.5s ease-out reverse forwards;
+}
+
+@keyframes fadeSlideDown { 
+  from { opacity: 0; transform: translateY(-10px); } 
+  to { opacity: 1; transform: translateY(0); } 
 }

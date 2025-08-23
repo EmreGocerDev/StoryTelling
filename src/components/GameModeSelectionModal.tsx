@@ -1,18 +1,20 @@
+// src/components/GameModeSelectionModal.tsx
 'use client';
 
 import { useState, useMemo, useRef } from 'react';
 import { legendsData, LegendCategory, Legend } from '@/lib/legendsData';
 
-type GameMode = 'classic' | 'detective' | 'custom' | 'prison_escape' | 'legends';
+type GameMode = 'classic' | 'detective' | 'custom' | 'prison_escape' | 'legends' | 'dnd' | 'dnd_vs';
 type Difficulty = 'easy' | 'normal' | 'hard';
 
 interface Props {
-  onStartStory: (mode: GameMode, difficulty: Difficulty, customPrompt?: string, legendName?: string) => void;
+  onStartStory: (mode: Exclude<GameMode, 'dnd' | 'dnd_vs'>, difficulty: Difficulty, customPrompt?: string, legendName?: string) => void;
+  onStartDnd: () => void;
   onClose: () => void;
   className?: string;
 }
 
-const GameModeSelectionModal: React.FC<Props> = ({ onStartStory, onClose }) => {
+const GameModeSelectionModal: React.FC<Props> = ({ onStartStory, onStartDnd, onClose, className }) => {
   const [selectedMode, setSelectedMode] = useState<GameMode>('classic');
   const [selectedDifficulty, setSelectedDifficulty] = useState<Difficulty>('normal');
   const [customPrompt, setCustomPrompt] = useState('');
@@ -21,7 +23,6 @@ const GameModeSelectionModal: React.FC<Props> = ({ onStartStory, onClose }) => {
   const [selectedCategory, setSelectedCategory] = useState<LegendCategory | null>(null);
   const [selectedLegend, setSelectedLegend] = useState<Legend | null>(null);
 
-  // ARAMA İÇİN YENİ STATE
   const [searchTerm, setSearchTerm] = useState('');
 
   const categoryTrackRef = useRef<HTMLDivElement>(null);
@@ -37,7 +38,6 @@ const GameModeSelectionModal: React.FC<Props> = ({ onStartStory, onClose }) => {
     }
   };
 
-  // ARAMA MANTIĞI
   const allLegends = useMemo(() => 
     legendsData.flatMap(category => 
       category.legends.map(legend => ({ ...legend, categoryName: category.categoryName }))
@@ -58,17 +58,20 @@ const GameModeSelectionModal: React.FC<Props> = ({ onStartStory, onClose }) => {
     setStep(1);
     setSelectedCategory(null);
     setSelectedLegend(null);
-    setSearchTerm(''); // Mod değiştiğinde aramayı sıfırla
+    setSearchTerm('');
   };
 
   const handleStart = () => {
     if (selectedMode === 'custom' && !customPrompt.trim()) { alert('Lütfen özel hikayeniz için bir başlangıç senaryosu yazın.'); return; }
     if (selectedMode === 'legends' && !selectedLegend) { alert('Lütfen bir efsane seçin.'); return; }
-    onStartStory(selectedMode, selectedDifficulty, customPrompt, selectedLegend?.name);
+    
+    // Tek oyunculu modlar için
+    if (selectedMode !== 'dnd' && selectedMode !== 'dnd_vs') {
+        onStartStory(selectedMode, selectedDifficulty, customPrompt, selectedLegend?.name);
+    }
   };
 
   const renderLegendsContent = () => {
-    // Arama yapılıyorsa, carousel yerine arama sonuçlarını göster
     if (searchTerm.trim()) {
       return (
         <div className="search-results-list">
@@ -84,7 +87,6 @@ const GameModeSelectionModal: React.FC<Props> = ({ onStartStory, onClose }) => {
       );
     }
 
-    // Arama yoksa, normal carousel adımlarını göster
     if (step === 1) {
       return (
         <div className="legend-carousel-container">
@@ -145,6 +147,14 @@ const GameModeSelectionModal: React.FC<Props> = ({ onStartStory, onClose }) => {
       );
     }
 
+    if (selectedMode === 'dnd' || selectedMode === 'dnd_vs') {
+        return (
+            <div className="modal-actions">
+                <button className="white-button" onClick={onStartDnd}>Çok Oyunculu Başlat</button>
+            </div>
+        );
+    }
+
     return (
       <>
         <div className="custom-prompt-area" style={{display: selectedMode === 'custom' ? 'block' : 'none'}}>
@@ -165,7 +175,7 @@ const GameModeSelectionModal: React.FC<Props> = ({ onStartStory, onClose }) => {
   };
 
   return (
-    <div className="modal-overlay" onClick={onClose}>
+    <div className={`modal-overlay ${className}`} onClick={onClose}>
       <div className="modal-content" onClick={(e) => e.stopPropagation()}>
         <h2>Yeni Bir Maceraya Başla</h2>
         <div className="mode-selection main-modes">
@@ -174,6 +184,8 @@ const GameModeSelectionModal: React.FC<Props> = ({ onStartStory, onClose }) => {
             <button className={`mode-button ${selectedMode === 'detective' ? 'active' : ''}`} onClick={() => handleModeSelect('detective')}><h3>Dedektif</h3><p>Bir cinayeti araştır, ipuçlarını topla ve katili bul.</p></button>
             <button className={`mode-button ${selectedMode === 'custom' ? 'active' : ''}`} onClick={() => handleModeSelect('custom')}><h3>Özelleştir</h3><p>Kendi evrenini ve kurallarını sen belirle.</p></button>
             <button className={`mode-button ${selectedMode === 'legends' ? 'active' : ''}`} onClick={() => handleModeSelect('legends')}><h3>Efsaneler</h3><p>Tarihten ve mitolojiden bir hikayeyi sen yaşa.</p></button>
+            <button className={`mode-button ${selectedMode === 'dnd' ? 'active' : ''}`} onClick={() => handleModeSelect('dnd')}><h3>DND</h3><p>Arkadaşlarınla sırayla hikaye yazarak macera yaşa.</p></button>
+            <button className={`mode-button ${selectedMode === 'dnd_vs' ? 'active' : ''}`} onClick={() => handleModeSelect('dnd_vs')}><h3>DND VS</h3><p>Yapay zeka hakemliğinde arkadaşlarınla mücadele et.</p></button>
         </div>
         <hr className="modal-divider" />
         {renderContent()}

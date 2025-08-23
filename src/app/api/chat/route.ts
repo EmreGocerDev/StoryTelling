@@ -1,9 +1,11 @@
+// src/app/api/chat/route.ts
 import { NextResponse } from 'next/server';
 import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
 import { cookies } from 'next/headers';
 
 export async function POST(req: Request) {
-  const supabase = createRouteHandlerClient({ cookies });
+  const cookieStore = cookies();
+  const supabase = createRouteHandlerClient({ cookies: () => cookieStore });
   const { data: { user } } = await supabase.auth.getUser();
 
   if (!user) {
@@ -16,7 +18,6 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'Mesaj içeriği boş olamaz.' }, { status: 400 });
   }
   
-  // Gelen mesajı veritabanına ekle. Realtime bu değişikliği yakalayıp herkese yayınlayacak.
   const { error } = await supabase.from('chat_messages').insert({
     user_id: user.id,
     content: content.trim()

@@ -2,7 +2,6 @@
 
 import type { Session } from '@supabase/auth-helpers-nextjs';
 
-// Gerekli tipleri doğrudan bu dosyada tanımlıyoruz
 interface Message { 
   role: 'user' | 'assistant';
   content: string;
@@ -20,9 +19,10 @@ interface Story {
   title?: string;
   game_mode?: string;
   npcs?: NPC[] | null;
+  is_multiplayer?: boolean;
+  status?: string;
 }
 
-// DÜZELTME: onChatToggle prop'u buraya eklendi
 interface SidebarProps {
   stories: Story[];
   session: Session | null;
@@ -33,7 +33,6 @@ interface SidebarProps {
   onDeleteStory: (id: number) => void;
   onLogout: () => void;
   onChatToggle: () => void;
-  
 }
 
 const Sidebar: React.FC<SidebarProps> = ({
@@ -45,7 +44,7 @@ const Sidebar: React.FC<SidebarProps> = ({
   onSelectStory,
   onDeleteStory,
   onLogout,
-  onChatToggle, // DÜZELTME: Prop burada da karşılandı
+  onChatToggle,
 }) => {
   const storiesReachedLimit = stories.length >= storyLimit;
 
@@ -75,7 +74,8 @@ const Sidebar: React.FC<SidebarProps> = ({
             >
               {story.title || 'İsimsiz Macera'}
             </span>
-            <span className="story-mode-badge">{story.game_mode?.replace(/_/g, ' ') || 'classic'}</span>
+            {story.is_multiplayer && <span className="story-mode-badge">DND {story.status}</span>}
+            {!story.is_multiplayer && <span className="story-mode-badge">{story.game_mode?.replace(/_/g, ' ') || 'classic'}</span>}
             <button
               className="delete-button"
               onClick={() => onDeleteStory(story.id)}
