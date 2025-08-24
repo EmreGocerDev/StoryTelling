@@ -219,7 +219,7 @@ useEffect(() => {
     const channelName = `game-${activeStory.id}`;
     const channel = supabase.channel(channelName);
     
-    const gameUpdateSubscription = channel.on(
+    const _gameUpdateSubscription = channel.on(
         'postgres_changes', 
         { event: '*', schema: 'public', table: 'games', filter: `id=eq.${activeStory.id}` }, 
         (payload) => {
@@ -252,7 +252,7 @@ useEffect(() => {
         supabase.removeChannel(channel);
     };
 
-}, [activeStory?.id, supabase]);
+}, [activeStory?.id, activeStory?.is_multiplayer, supabase]);
 
   const handleStartStory = useCallback(async (mode: string, difficulty: string, customPrompt?: string, legendName?: string) => {
     if (!session?.user || stories.length >= STORY_LIMIT) return;
@@ -667,13 +667,13 @@ useEffect(() => {
         {isDndCreationModalOpen && <DndGameCreationModal session={session} onStartGame={handleStartDndGame} onClose={handleDndCreationModalClose} className={closingWindows.dndCreationModal ? 'fade-out' : 'fade-in'} />}
         {isNoteModalOpen && <NoteModal initialNotes={currentNotes} onSave={handleSaveNotes} onClose={handleNoteModalClose} className={closingWindows.noteModal ? 'fade-out' : 'fade-in'} />}
         {isChatOpen && (
-          <GlobalChat
-            session={session}
-            onClose={handleChatClose}
-            onStartPrivateChat={handleStartPrivateChat}
-            className={`${closingWindows.globalChat ? 'fade-out' : 'fade-in'} ${isMobile ? 'full-screen-modal' : ''}`}
-            gameParticipants={gameParticipants}
-          />
+          // YENİ HALİ
+<GlobalChat
+  session={session}
+  onClose={handleChatClose}
+  onStartPrivateChat={handleStartPrivateChat}
+  className={`${closingWindows.globalChat ? 'fade-out' : 'fade-in'} ${isMobile ? 'full-screen-modal' : ''}`}
+/>
         )}
         {Array.from(activePrivateChats.entries()).map(([conversationId, otherUser]) => (
           <PrivateChat

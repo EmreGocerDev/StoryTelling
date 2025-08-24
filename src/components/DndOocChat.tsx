@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef, FormEvent } from 'react';
-import type { Session } from '@supabase/auth-helpers-nextjs';
+import type { } from '@supabase/auth-helpers-nextjs';
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
 
 interface ChatMessage {

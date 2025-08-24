@@ -22,7 +22,16 @@ export async function POST(req: Request) {
         user1_id: user.id,
         user2_id: other_user_id,
     });
+    //
+    const { data: areFriends, error: friendsError } = await supabase.rpc('are_friends', {
+         user_a_id: user.id,
+         user_b_id: other_user_id
+     });
 
+     if (friendsError || !areFriends) {
+         return NextResponse.json({ error: 'Sadece arkadaşlarınızla sohbet başlatabilirsiniz.' }, { status: 403 });
+     }
+//
     if (rpcError) {
         console.error("RPC Hatası:", rpcError);
         if (rpcError.code === '42883') {

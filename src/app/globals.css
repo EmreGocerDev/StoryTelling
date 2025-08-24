@@ -384,3 +384,215 @@ button, input, textarea { font-family: inherit; }
   from { opacity: 0; transform: translateY(-10px); } 
   to { opacity: 1; transform: translateY(0); } 
 }
+/* ---------- YENİ EKLENEN STİLLER: Sohbet ve Arkadaşlık Arayüzü ---------- */
+
+/* Sağ paneldeki sekmeler için container */
+.chat-tabs {
+  display: flex;
+  gap: 0.2rem;
+  margin-bottom: 1rem;
+  border-bottom: 1px solid #333;
+  padding-bottom: 0.5rem;
+}
+
+/* Her bir sekme butonu */
+.chat-tab-button {
+  flex: 1;
+  background-color: transparent;
+  border: 1px solid #555;
+  color: #ccc;
+  padding: 0.5rem;
+  cursor: pointer;
+  font-size: 0.9rem;
+  border-radius: 2px;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.chat-tab-button:hover {
+  background-color: #222;
+  border-color: #fff;
+}
+
+/* Aktif olan sekme butonu */
+.chat-tab-button.active {
+  background-color: #333;
+  border-color: #fff;
+  color: #fff;
+}
+
+/* Kullanıcı ve İstek listeleri için genel stil */
+.chat-users-list, .chat-requests-list {
+  padding: 0 0.5rem;
+  height: 100%;
+  overflow-y: auto;
+  list-style: none;
+}
+
+/* Kullanıcı listesindeki her bir satır */
+.chat-user-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.75rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid #222;
+}
+
+.chat-user-item:last-child {
+  border-bottom: none;
+}
+
+.chat-user-item-name {
+  flex-grow: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  padding-right: 0.5rem;
+}
+
+.chat-user-item-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-shrink: 0;
+}
+
+/* Arkadaşlık isteği listesindeki her bir satır */
+.chat-request-item {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid #222;
+}
+
+.chat-request-item:last-child {
+  border-bottom: none;
+}
+
+.chat-request-item-actions {
+  display: flex;
+  gap: 0.5rem;
+  width: 100%;
+}
+
+.chat-request-item-actions .white-button,
+.chat-request-item-actions .close-button {
+  flex: 1;
+}
+
+/* Beklemede durumu için metin stili */
+.status-pending {
+  color: #ffcc00; /* Sarı */
+  font-size: 0.9rem;
+  flex-shrink: 0;
+}
+
+/* Çevrimiçi/Çevrimdışı durum göstergesi */
+.status-indicator {
+    margin-left: 0.5rem;
+}
+
+.status-indicator.online {
+    color: #4ade80; /* Yeşil */
+}
+
+.status-indicator.offline {
+    color: #6b7280; /* Gri */
+}
+/* Mevcut .chat-online-users-area'yı yeni .chat-sidebar için düzenle */
+.chat-body {
+    display: flex;
+}
+
+.chat-main-panel {
+    flex-grow: 1;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+}
+
+.chat-messages-area { /* Zaten var, dokunma */
+    flex-grow: 1;
+    padding: 1rem;
+    overflow-y: auto;
+}
+
+.chat-sidebar {
+    width: 120px;
+    flex-shrink: 0;
+    border-left: 1px solid #333;
+    padding: 1rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.chat-sidebar-button {
+  width: 100%;
+  background-color: transparent;
+  border: 1px solid #555;
+  color: #ccc;
+  padding: 0.75rem 0.5rem;
+  cursor: pointer;
+  font-size: 0.9rem;
+  border-radius: 2px;
+  transition: all 0.2s ease;
+}
+.chat-sidebar-button.active, .chat-sidebar-button:hover {
+  background-color: #333;
+  border-color: #fff;
+  color: #fff;
+}
+
+/* Yönetim ve Arkadaş Panelleri için Stiller */
+.chat-management-panel {
+  flex-grow: 1;
+  padding: 1rem;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.chat-management-panel h4 {
+    border-bottom: 1px solid #333;
+    padding-bottom: 0.5rem;
+    font-size: 1.1rem;
+}
+
+.panel-info-text {
+    text-align: center;
+    color: #888;
+    font-size: 0.9rem;
+    padding: 1rem 0;
+}
+.panel-info-text.error {
+    color: #ff4d4d;
+}
+
+.chat-search-form {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.chat-search-input {
+    flex-grow: 1;
+    background-color: #1a1a1a;
+    border: 1px solid #555;
+    color: white;
+    padding: 0.5rem 0.75rem;
+    font-size: 1rem;
+    border-radius: 2px;
+}
+.chat-search-input:focus {
+  outline: none;
+  border-color: white;
+}
+.chat-search-results {
+    list-style: none;
+    padding: 0;
+}
