@@ -4,7 +4,7 @@
 import { useState, useMemo, useRef } from 'react';
 import { legendsData, LegendCategory, Legend } from '@/lib/legendsData';
 
-type GameMode = 'classic' | 'detective' | 'custom' | 'prison_escape' | 'legends' | 'dnd' | 'dnd_vs';
+type GameMode = 'classic' | 'detective' | 'custom' | 'prison_escape' | 'legends' | 'dnd';
 type Difficulty = 'easy' | 'normal' | 'hard';
 
 interface Props {
@@ -66,7 +66,7 @@ const GameModeSelectionModal: React.FC<Props> = ({ onStartStory, onStartDnd, onC
     if (selectedMode === 'legends' && !selectedLegend) { alert('Lütfen bir efsane seçin.'); return; }
     
     // Tek oyunculu modlar için
-    if (selectedMode !== 'dnd' && selectedMode !== 'dnd_vs') {
+    if (selectedMode !== 'dnd' ) {
         onStartStory(selectedMode, selectedDifficulty, customPrompt, selectedLegend?.name);
     }
   };
@@ -147,7 +147,7 @@ const GameModeSelectionModal: React.FC<Props> = ({ onStartStory, onStartDnd, onC
       );
     }
 
-    if (selectedMode === 'dnd' || selectedMode === 'dnd_vs') {
+    if (selectedMode === 'dnd' ) {
         return (
             <div className="modal-actions">
                 <button className="white-button" onClick={onStartDnd}>Çok Oyunculu Başlat</button>
@@ -185,7 +185,7 @@ const GameModeSelectionModal: React.FC<Props> = ({ onStartStory, onStartDnd, onC
             <button className={`mode-button ${selectedMode === 'custom' ? 'active' : ''}`} onClick={() => handleModeSelect('custom')}><h3>Özelleştir</h3><p>Kendi evrenini ve kurallarını sen belirle.</p></button>
             <button className={`mode-button ${selectedMode === 'legends' ? 'active' : ''}`} onClick={() => handleModeSelect('legends')}><h3>Efsaneler</h3><p>Tarihten ve mitolojiden bir hikayeyi sen yaşa.</p></button>
             <button className={`mode-button ${selectedMode === 'dnd' ? 'active' : ''}`} onClick={() => handleModeSelect('dnd')}><h3>DND</h3><p>Arkadaşlarınla sırayla hikaye yazarak macera yaşa.</p></button>
-            <button className={`mode-button ${selectedMode === 'dnd_vs' ? 'active' : ''}`} onClick={() => handleModeSelect('dnd_vs')}><h3>DND VS</h3><p>Yapay zeka hakemliğinde arkadaşlarınla mücadele et.</p></button>
+            
         </div>
         <hr className="modal-divider" />
         {renderContent()}

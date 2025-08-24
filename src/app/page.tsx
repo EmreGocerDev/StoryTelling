@@ -209,16 +209,14 @@ export default function Home() {
         .finally(() => setIsLoading(false));
     }
   }, [activeStory, supabase]);
-
-  // DÜZELTME: En sağlam real-time abonelik useEffect'i
-  // src/app/page.tsx DOSYASINDAKİ DEĞİŞTİRİLECEK KOD BLOKU
-
-useEffect(() => {
+  
+  useEffect(() => {
     if (!activeStory?.is_multiplayer || !activeStory.id) return;
 
     const channelName = `game-${activeStory.id}`;
     const channel = supabase.channel(channelName);
     
+    // DÜZELTME: Kullanılmayan değişkenin başına '_' eklendi
     const _gameUpdateSubscription = channel.on(
         'postgres_changes', 
         { event: '*', schema: 'public', table: 'games', filter: `id=eq.${activeStory.id}` }, 
@@ -232,7 +230,6 @@ useEffect(() => {
                 setCurrentNotes(newGameData.notes || "");
                 setCurrentPlayerTurn(newGameData.current_player_turn_id || null);
                 
-                
                 const lastMessage = newGameData.history ? newGameData.history[newGameData.history.length - 1] : null;
                 if (lastMessage && lastMessage.role === 'assistant') {
                     setIsTyping(true);
@@ -241,18 +238,17 @@ useEffect(() => {
         }
     ).subscribe((status) => {
         if (status === 'SUBSCRIBED') {
-            // İsteğe bağlı: Konsolda abonelik durumunu görmek için
             console.log(`'${channelName}' kanalına başarıyla abone olundu.`);
         }
     });
 
     return () => {
-        // İsteğe bağlı: Konsolda abonelik durumunu görmek için
         console.log(`'${channelName}' kanalından abonelik kaldırılıyor.`);
         supabase.removeChannel(channel);
     };
 
-}, [activeStory?.id, activeStory?.is_multiplayer, supabase]);
+  // DÜZELTME: Eksik bağımlılık eklendi
+  }, [activeStory?.id, activeStory?.is_multiplayer, supabase]);
 
   const handleStartStory = useCallback(async (mode: string, difficulty: string, customPrompt?: string, legendName?: string) => {
     if (!session?.user || stories.length >= STORY_LIMIT) return;
@@ -276,7 +272,8 @@ useEffect(() => {
     setIsLoading(false);
   }, [session, stories, supabase]);
 
-  const handleStartDndGame = async (mode: 'dnd' | 'dnd_vs', difficulty: string, customPrompt: string, selectedUsers: string[], characterName: string, aiRoleId?: string) => {
+  // DÜZELTME: DnD VS modu kaldırıldığı için fonksiyon sadeleştirildi
+  const handleStartDndGame = async (difficulty: string, customPrompt: string, selectedUsers: string[], characterName: string) => {
     if (!session?.user) return;
     setIsDndCreationModalOpen(false);
     setIsLoading(true);
@@ -287,12 +284,12 @@ useEffect(() => {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        game_mode: mode,
+        game_mode: 'dnd', // Artık sabit olarak 'dnd' gönderiyoruz
         difficulty,
         custom_prompt: customPrompt,
         player_ids: playerIds,
         host_character_name: characterName,
-        ai_role_id: aiRoleId
+        ai_role_id: null // Artık bu rol yok
       }),
     });
 
@@ -445,7 +442,6 @@ useEffect(() => {
     }
   };
 
-
   const handleLogout = async () => {
     await supabase.auth.signOut();
     router.push('/login');
@@ -493,6 +489,13 @@ useEffect(() => {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ other_user_id: userId }),
     });
+    
+    if (!response.ok) {
+        const data = await response.json();
+        alert(`Sohbet başlatılamadı: ${data.error}`);
+        return;
+    }
+    
     const { conversation_id } = await response.json();
     if (conversation_id) {
       setActivePrivateChats(prev => new Map(prev).set(conversation_id, { id: userId, username: username }));
@@ -667,13 +670,12 @@ useEffect(() => {
         {isDndCreationModalOpen && <DndGameCreationModal session={session} onStartGame={handleStartDndGame} onClose={handleDndCreationModalClose} className={closingWindows.dndCreationModal ? 'fade-out' : 'fade-in'} />}
         {isNoteModalOpen && <NoteModal initialNotes={currentNotes} onSave={handleSaveNotes} onClose={handleNoteModalClose} className={closingWindows.noteModal ? 'fade-out' : 'fade-in'} />}
         {isChatOpen && (
-          // YENİ HALİ
-<GlobalChat
-  session={session}
-  onClose={handleChatClose}
-  onStartPrivateChat={handleStartPrivateChat}
-  className={`${closingWindows.globalChat ? 'fade-out' : 'fade-in'} ${isMobile ? 'full-screen-modal' : ''}`}
-/>
+          <GlobalChat
+            session={session}
+            onClose={handleChatClose}
+            onStartPrivateChat={handleStartPrivateChat}
+            className={`${closingWindows.globalChat ? 'fade-out' : 'fade-in'} ${isMobile ? 'full-screen-modal' : ''}`}
+          />
         )}
         {Array.from(activePrivateChats.entries()).map(([conversationId, otherUser]) => (
           <PrivateChat
