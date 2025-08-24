@@ -6,7 +6,7 @@ import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
 
 // Tipler
 interface Friend {
-  user_id: string; // Arkadaşın ID'si
+  user_id: string;
   username: string;
   chat_color: string;
 }
@@ -50,6 +50,26 @@ const GlobalChat: React.FC<Props> = ({ session, onClose, onStartPrivateChat, cla
   const [isSearching, setIsSearching] = useState(false);
   const [searchError, setSearchError] = useState<string | null>(null);
 
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [myProfile, setMyProfile] = useState<Profile | null>(null);
+  const [settingsInput, setSettingsInput] = useState('');
+  const [settingsColor, setSettingsColor] = useState('');
+
+  const fetchMyProfile = useCallback(async () => {
+    if (!session) return;
+    const { data: profileData } = await supabase
+      .from('profiles')
+      .select('*')
+      .eq('id', session.user.id)
+      .single();
+    
+    if (profileData) {
+      setMyProfile(profileData);
+      setSettingsInput(profileData.username);
+      setSettingsColor(profileData.chat_color || '#FFFFFF');
+    }
+  }, [session, supabase]);
+
   const fetchFriendsAndRequests = useCallback(async () => {
     if (!session) return;
     const { data: friendsData, error: rpcError } = await supabase.rpc('get_friends_for_user', { p_user_id: session.user.id });
@@ -64,11 +84,11 @@ const GlobalChat: React.FC<Props> = ({ session, onClose, onStartPrivateChat, cla
     
     if (requestsError) console.error('Arkadaşlık istekleri çekilirken hata:', requestsError.message);
     else if (requestsData) {
-        const formattedRequests = requestsData.map(req => ({
-            ...req,
-            profiles: Array.isArray(req.profiles) ? req.profiles[0] : req.profiles
-        }));
-        setFriendRequests(formattedRequests as FriendRequest[]);
+      const formattedRequests = requestsData.map(req => ({
+          ...req,
+          profiles: Array.isArray(req.profiles) ? req.profiles[0] : req.profiles
+      }));
+      setFriendRequests(formattedRequests as FriendRequest[]);
     }
   }, [session, supabase]);
 
@@ -78,6 +98,7 @@ const GlobalChat: React.FC<Props> = ({ session, onClose, onStartPrivateChat, cla
     const fetchInitialData = async () => {
       const { data: messagesData } = await supabase.from('chat_messages').select('*, profiles(username, chat_color)').order('created_at', { ascending: false }).limit(50);
       if (messagesData) setMessages(messagesData.reverse() as ChatMessage[]);
+      fetchMyProfile();
       fetchFriendsAndRequests();
     };
     
@@ -92,24 +113,43 @@ const GlobalChat: React.FC<Props> = ({ session, onClose, onStartPrivateChat, cla
     ).subscribe();
 
     const friendChannel = supabase.channel('friend-updates')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'friends', filter: `or(user1_id.eq.${session.user.id},user2_id.eq.${session.user.id})` }, () => fetchFriendsAndRequests())
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'friend_requests', filter: `or(sender_id.eq.${session.user.id},receiver_id.eq.${session.user.id})`}, () => fetchFriendsAndRequests())
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'friends',
+        filter: `or(user1_id.eq.${session.user.id},user2_id.eq.${session.user.id})`
+      }, () => fetchFriendsAndRequests())
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'friend_requests',
+        filter: `or(sender_id.eq.${session.user.id},receiver_id.eq.${session.user.id})`
+      }, () => fetchFriendsAndRequests())
       .subscribe();
 
     return () => {
       supabase.removeChannel(chatChannel);
       supabase.removeChannel(friendChannel);
     };
-  }, [session, supabase, fetchFriendsAndRequests]);
+  }, [session, supabase, fetchFriendsAndRequests, fetchMyProfile]);
   
   useEffect(() => {
-      messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
-  // --- İŞLEVSEL FONKSİYONLARIN TAMAMI ---
+  const handleSettingsSave = async () => {
+    if (!session || !myProfile) return;
+    const { error } = await supabase.from('profiles').update({ username: settingsInput, chat_color: settingsColor }).eq('id', session.user.id);
+    if (error) {
+      console.error("Ayarlar kaydedilirken bir hata oluştu:", error);
+      alert("Ayarlar kaydedilirken bir hata oluştu.");
+    } else {
+      setIsSettingsOpen(false);
+      await fetchMyProfile();
+    }
+  };
 
   const handleAddFriend = async (receiverId: string) => {
-    console.log('handleAddFriend çağrıldı, Alıcı ID:', receiverId); // HATA AYIKLAMA İÇİN
     if (receiverId === session?.user.id) {
         alert("Kendinizi arkadaş olarak ekleyemezsiniz.");
         return;
@@ -128,7 +168,6 @@ const GlobalChat: React.FC<Props> = ({ session, onClose, onStartPrivateChat, cla
   };
 
   const handleRequest = async (requestId: string, action: 'accept' | 'decline') => {
-    console.log('handleRequest çağrıldı, İstek ID:', requestId, 'Eylem:', action); // HATA AYIKLAMA İÇİN
     const response = await fetch('/api/friends/handle', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -138,11 +177,10 @@ const GlobalChat: React.FC<Props> = ({ session, onClose, onStartPrivateChat, cla
       const errorData = await response.json();
       alert(`Hata: ${errorData.error}`);
     }
-    fetchFriendsAndRequests(); // Arayüzü güncelle
+    fetchFriendsAndRequests();
   };
   
   const handleRemoveFriend = async (friendId: string) => {
-    console.log('handleRemoveFriend çağrıldı, Arkadaş ID:', friendId); // HATA AYIKLAMA İÇİN
     if (!window.confirm("Bu arkadaşı silmek istediğinizden emin misiniz?")) return;
     const response = await fetch('/api/friends/remove', {
         method: 'POST',
@@ -153,7 +191,7 @@ const GlobalChat: React.FC<Props> = ({ session, onClose, onStartPrivateChat, cla
         const errorData = await response.json();
         alert(`Hata: ${errorData.error}`);
     }
-    fetchFriendsAndRequests(); // Arayüzü güncelle
+    fetchFriendsAndRequests();
   };
   
   const handleSubmit = async (e: FormEvent) => {
@@ -188,98 +226,120 @@ const GlobalChat: React.FC<Props> = ({ session, onClose, onStartPrivateChat, cla
     }
     setIsSearching(false);
   };
-  
-  // Önceki JSX kodu (return kısmı) aynı kalabilir.
+
   return (
     <div className={`global-chat-container ${className || ''}`}>
-        <div className="chat-header">
-            <h4>Sohbet</h4>
-            <button onClick={onClose} className="chat-close-button">X</button>
-        </div>
-        <div className="chat-body">
-            <div className="chat-main-panel">
-                {activeTab === 'chat' && (
-                    <div className="chat-messages-area">
-                        {messages.map(msg => (
-                            <div key={msg.id} className="chat-message-item">
-                                <strong style={{ color: msg.profiles?.chat_color || '#fff' }}>
-                                    {msg.profiles?.username || 'Bilinmeyen'}: 
-                                </strong>
-                                <span>{msg.content}</span>
-                            </div>
-                        ))}
-                        <div ref={messagesEndRef} />
-                    </div>
-                )}
-
-                {activeTab === 'friends' && (
-                    <div className="chat-management-panel">
-                        <h4>Arkadaşlar ({friends.length})</h4>
-                        <ul className="chat-users-list">
-                        {friends.length > 0 ? friends.map(friend => (
-                            <li key={friend.user_id} className="chat-user-item">
-                                <span className="chat-user-item-name" style={{ color: friend.chat_color || '#fff' }}>{friend.username}</span>
-                                <div className="chat-user-item-actions">
-                                    <button onClick={() => onStartPrivateChat(friend.user_id, friend.username)} className="chat-toggle-button">Sohbet</button>
-                                    <button onClick={() => handleRemoveFriend(friend.user_id)} className="delete-button">Sil</button>
-                                </div>
-                            </li>
-                        )) : <p className='panel-info-text'>Henüz hiç arkadaşınız yok.</p>}
-                        </ul>
-                    </div>
-                )}
-
-                {activeTab === 'manage' && (
-                    <div className="chat-management-panel">
-                        <h4>İstekler ({friendRequests.length})</h4>
-                        <ul className="chat-requests-list">
-                        {friendRequests.length > 0 ? friendRequests.map(req => (
-                            <li key={req.id} className="chat-request-item">
-                                <span><strong>{req.profiles?.username}</strong> size istek gönderdi.</span>
-                                <div className="chat-request-item-actions">
-                                <button onClick={() => handleRequest(req.id, 'accept')} className="white-button">Kabul Et</button>
-                                <button onClick={() => handleRequest(req.id, 'decline')} className="close-button">Reddet</button>
-                                </div>
-                            </li>
-                        )) : <p className='panel-info-text'>Yeni arkadaşlık isteğiniz yok.</p>}
-                        </ul>
-                        <hr className='modal-divider' />
-                        <h4>Arkadaş Ekle</h4>
-                        <form className="chat-search-form" onSubmit={handleSearch}>
-                            <input 
-                                type="text" 
-                                placeholder='Kullanıcı adı yazın...'
-                                value={searchQuery}
-                                onChange={(e) => setSearchQuery(e.target.value)}
-                                className="chat-search-input"
-                            />
-                            <button type="submit" disabled={isSearching} className='white-button'>
-                                {isSearching ? '...' : 'Ara'}
-                            </button>
-                        </form>
-                        <ul className="chat-search-results">
-                            {searchError && <p className='panel-info-text error'>{searchError}</p>}
-                            {searchResults.length > 0 && searchResults.map(user => (
-                                <li key={user.id} className="chat-user-item">
-                                <span className="chat-user-item-name">{user.username}</span>
-                                <div className="chat-user-item-actions">
-                                    <button onClick={() => handleAddFriend(user.id)} className="chat-toggle-button">Ekle</button>
-                                </div>
-                                </li>
-                            ))}
-                        </ul>
-                    </div>
-                )}
+      <div className="chat-header">
+        <h4>Sohbet</h4>
+        <button onClick={onClose} className="chat-close-button">X</button>
+      </div>
+      <div className="chat-body">
+        <div className="chat-main-panel">
+          {activeTab === 'chat' && (
+            <div className="chat-messages-area">
+              {messages.map(msg => (
+                  <div key={msg.id} className="chat-message-item">
+                    <strong style={{ color: msg.profiles?.chat_color || '#fff' }}>
+                      {msg.profiles?.username || 'Bilinmeyen'}: 
+                    </strong>
+                    <span>{msg.content}</span>
+                  </div>
+              ))}
+              <div ref={messagesEndRef} />
             </div>
-            
-            <div className="chat-sidebar">
-                <button className={`chat-sidebar-button ${activeTab === 'chat' ? 'active' : ''}`} onClick={() => setActiveTab('chat')}>Sohbet</button>
-                <button className={`chat-sidebar-button ${activeTab === 'friends' ? 'active' : ''}`} onClick={() => setActiveTab('friends')}>Arkadaşlar</button>
-                <button className={`chat-sidebar-button ${activeTab === 'manage' ? 'active' : ''}`} onClick={() => setActiveTab('manage')}>Yönet</button>
-            </div>
-        </div>
+          )}
 
-        <form onSubmit={handleSubmit} className="chat-input-form">
+          {activeTab === 'friends' && (
+             <div className="chat-management-panel">
+                <h4>Arkadaşlar ({friends.length})</h4>
+                <ul className="chat-users-list">
+                  {friends.length > 0 ? friends.map(friend => (
+                     <li key={friend.user_id} className="chat-user-item">
+                        <span className="chat-user-item-name" style={{ color: friend.chat_color || '#fff' }}>{friend.username}</span>
+                        <div className="chat-user-item-actions">
+                            <button onClick={() => onStartPrivateChat(friend.user_id, friend.username)} className="chat-toggle-button">Sohbet</button>
+                            <button onClick={() => handleRemoveFriend(friend.user_id)} className="delete-button">Sil</button>
+                        </div>
+                     </li>
+                  )) : <p className='panel-info-text'>Henüz hiç arkadaşınız yok.</p>}
+                </ul>
+             </div>
+          )}
+
+          {activeTab === 'manage' && (
+             <div className="chat-management-panel">
+                <h4>İstekler ({friendRequests.length})</h4>
+                <ul className="chat-requests-list">
+                   {friendRequests.length > 0 ? friendRequests.map(req => (
+                     <li key={req.id} className="chat-request-item">
+                        <span><strong>{req.profiles?.username}</strong> size istek gönderdi.</span>
+                        <div className="chat-request-item-actions">
+                           <button onClick={() => handleRequest(req.id, 'accept')} className="white-button">Kabul Et</button>
+                           <button onClick={() => handleRequest(req.id, 'decline')} className="close-button">Reddet</button>
+                        </div>
+                     </li>
+                   )) : <p className='panel-info-text'>Yeni arkadaşlık isteğiniz yok.</p>}
+                </ul>
+                <hr className='modal-divider' />
+                <h4>Arkadaş Ekle</h4>
+                <form className="chat-search-form" onSubmit={handleSearch}>
+                    <input 
+                        type="text" 
+                        placeholder='Kullanıcı adı yazın...'
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        className="chat-search-input"
+                    />
+                    <button type="submit" disabled={isSearching} className='white-button'>
+                        {isSearching ? '...' : 'Ara'}
+                    </button>
+                </form>
+                <ul className="chat-search-results">
+                    {searchError && <p className='panel-info-text error'>{searchError}</p>}
+                    {searchResults.length > 0 && searchResults.map(user => (
+                        <li key={user.id} className="chat-user-item">
+                           <span className="chat-user-item-name">{user.username}</span>
+                           <div className="chat-user-item-actions">
+                              <button onClick={() => handleAddFriend(user.id)} className="chat-toggle-button">Ekle</button>
+                           </div>
+                        </li>
+                    ))}
+                </ul>
+             </div>
+          )}
+        </div>
+        
+        <div className="chat-sidebar">
+            <button className={`chat-sidebar-button ${activeTab === 'chat' ? 'active' : ''}`} onClick={() => setActiveTab('chat')}>Sohbet</button>
+            <button className={`chat-sidebar-button ${activeTab === 'friends' ? 'active' : ''}`} onClick={() => setActiveTab('friends')}>Arkadaşlar</button>
+            <button className={`chat-sidebar-button ${activeTab === 'manage' ? 'active' : ''}`} onClick={() => setActiveTab('manage')}>Yönet</button>
+        </div>
+      </div>
+
+      <div className="settings-input-wrapper">
+        <button className="settings-icon" onClick={() => setIsSettingsOpen(!isSettingsOpen)}>
+            ⚙️
+        </button>
+        {isSettingsOpen && (
+            <div className="chat-settings-panel fade-in">
+                <label htmlFor="username-input">Kullanıcı Adı:</label>
+                <input 
+                    id="username-input"
+                    type="text" 
+                    value={settingsInput}
+                    onChange={(e) => setSettingsInput(e.target.value)}
+                />
+                <label htmlFor="color-picker">Sohbet Rengi:</label>
+                <input 
+                    id="color-picker"
+                    type="color" 
+                    value={settingsColor}
+                    onChange={(e) => setSettingsColor(e.target.value)}
+                />
+                <button className="white-button" onClick={handleSettingsSave} style={{ marginTop: '0.5rem' }}>Kaydet</button>
+            </div>
+        )}
+        <form onSubmit={handleSubmit} className="chat-input-form" style={{ flexGrow: 1, borderTop: 'none' }}>
             <input 
               type="text" 
               value={input}
@@ -288,6 +348,7 @@ const GlobalChat: React.FC<Props> = ({ session, onClose, onStartPrivateChat, cla
             />
             <button type="submit">Gönder</button>
         </form>
+      </div>
     </div>
   );
 };
